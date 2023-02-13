@@ -1,15 +1,17 @@
-use crate::{music_folder, CHUNK_BYTES};
+use crate::state::{state, DistributionState};
 use eyre::eyre;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
+
+static CHUNK_BYTES: usize = 32_766;
 
 pub fn chunks_from_title(
     name: impl AsRef<Path>,
     start_at: usize,
     chunks: usize,
 ) -> eyre::Result<Vec<u8>> {
-    let file = File::open(music_folder().join(name))?;
+    let file = File::open(state().music_folder.join(name))?;
     chunks_from_file(file, start_at, chunks)
 }
 
