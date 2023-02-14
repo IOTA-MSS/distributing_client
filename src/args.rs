@@ -47,5 +47,5 @@ pub enum Command {
         iota_address: String,
     },
     /// Generate a new hex-encoded secret key for the wallet.
-    GenerateKey,
+    Generate,
 }

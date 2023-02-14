@@ -1,20 +1,22 @@
 mod args;
-mod chunks;
-mod iota;
+mod music_folder;
+mod wallet;
 mod state;
+mod contract;
 
 use args::Command;
+use music_folder::MusicFolder;
 use clap::Parser;
 use ethers::{
     abi::Abi,
     types::Transaction,
     utils::rlp::{Decodable, Rlp},
 };
-use iota::new_wallet;
-use state::{state, DistributionState};
-use std::{fs::File, net::SocketAddr, path::Path};
+use wallet::new_wallet;
+use state::State;
+use std::{net::SocketAddr, path::Path};
 use tokio::{
-    io::AsyncReadExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
 };
 use tracing::warn;
@@ -22,39 +24,39 @@ use tracing::warn;
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     match Command::parse() {
-        args::Command::Add { folder, song_ids } => add_songs(folder, song_ids).await,
-        args::Command::Remove { folder, song_ids } => remove_songs(folder, song_ids),
-        args::Command::GenerateKey => generate_key(),
+        args::Command::Add { folder, song_ids } => command_add_songs(folder, song_ids).await,
+        args::Command::Remove { folder, song_ids } => command_remove_songs(folder, song_ids),
+        args::Command::Generate => command_generate_key(),
         args::Command::Distribute {
-            port,
             folder,
+            port,
             key,
             iota_address,
-        } => serve(folder, port, key, iota_address).await,
+        } => command_distribute(folder, port, key, iota_address).await,
     }
 }
 
-async fn add_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
+async fn command_add_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
     todo!()
 }
 
-fn remove_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
+fn command_remove_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
+    let folder = MusicFolder::new(&folder);
     for id in &ids {
-        let path = Path::new(&folder).join(Path::new(id));
-        if let Err(e) = std::fs::remove_file(&path) {
-            println!("{e}: {:?}", path);
+        if let Err(error) = folder.remove_song(id) {
+            println!("{}", error);
         }
     }
     Ok(())
 }
 
-fn generate_key() -> eyre::Result<()> {
+fn command_generate_key() -> eyre::Result<()> {
     let (key, _wallet) = new_wallet();
-    println!("Your secret key: {key}");
+    println!("Your secret key is: \"{key}\"");
     Ok(())
 }
 
-async fn serve(
+async fn command_distribute(
     folder: String,
     port: u16,
     secret_key: String,
@@ -62,9 +64,9 @@ async fn serve(
 ) -> eyre::Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
-    DistributionState::init(&folder, port, secret_key, &iota_address)?;
+    State::init(&folder, port, secret_key, &iota_address)?;
 
-    let listener = TcpListener::bind(String::from("localhost:") + &state().port.to_string())
+    let listener = TcpListener::bind(String::from("localhost:") + &State::get().port.to_string())
         .await
         .unwrap();
 
@@ -84,9 +86,17 @@ async fn handle_incoming_tcp_connection(
     mut stream: TcpStream,
     _addr: SocketAddr,
 ) -> eyre::Result<()> {
-    let mut raw_transaction = Vec::new();
-    stream.read(&mut raw_transaction).await?;
-    let transaction = <Transaction as Decodable>::decode(&Rlp::new(&raw_transaction))?;
+    let bytes_read = {
+        let mut bytes_read = Vec::with_capacity(256);
+        stream.read(&mut bytes_read).await?;
+        bytes_read
+    };
+
+    // let call: ContractCall<Provider<Http>, _> = state().contract.undistribute(todo!());
+    // let pending_tx = call.gas(10)..await.unwrap();
+
+    let transaction = Transaction::decode(&Rlp::new(&bytes_read))?;
+
     let data = transaction.input;
     let abi = Abi {
         constructor: todo!(),
@@ -96,5 +106,10 @@ async fn handle_incoming_tcp_connection(
         receive: todo!(),
         fallback: todo!(),
     };
+
+    let chunks = State::folder().read_chunks("song_id", 10, 10)?;
+    stream.write(&chunks).await?;
+    stream.flush().await?;
+
     Ok(())
 }

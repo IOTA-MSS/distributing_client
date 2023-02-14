@@ -1530,6 +1530,7 @@ dependencies = [
  "once_cell",
  "serde_json",
  "tokio",
+ "tokio-rustls",
  "tracing",
  "tracing-subscriber",
 ]
