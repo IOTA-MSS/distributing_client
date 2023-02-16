@@ -1,20 +1,22 @@
 mod args;
-mod music_folder;
-mod wallet;
-mod state;
 mod contract;
+mod listener;
+mod music_folder;
+mod state;
+mod wallet;
 
 use args::Command;
-use music_folder::MusicFolder;
 use clap::Parser;
+use contract::IotaMssContract;
 use ethers::{
     abi::Abi,
     types::Transaction,
     utils::rlp::{Decodable, Rlp},
 };
-use wallet::new_wallet;
-use state::State;
-use std::{net::SocketAddr, path::Path};
+use ethers_providers::Provider;
+use music_folder::MusicFolder;
+use state::DistributionState;
+use std::net::SocketAddr;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -24,16 +26,34 @@ use tracing::warn;
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     match Command::parse() {
-        args::Command::Add { folder, song_ids } => command_add_songs(folder, song_ids).await,
-        args::Command::Remove { folder, song_ids } => command_remove_songs(folder, song_ids),
-        args::Command::Generate => command_generate_key(),
-        args::Command::Distribute {
+        Command::Add { folder, song_ids } => command_add_songs(folder, song_ids).await,
+        Command::Remove { folder, song_ids } => command_remove_songs(folder, song_ids),
+        Command::Generate => command_generate_key(),
+        Command::Distribute {
             folder,
             port,
             key,
-            iota_address,
-        } => command_distribute(folder, port, key, iota_address).await,
+            node_url,
+            contract_address,
+        } => command_distribute(folder, port, key, node_url, contract_address).await,
+        Command::TestClient {
+            port,
+            node_url,
+            key,
+            contract_address,
+        } => command_test_client(port, key, node_url, contract_address).await,
     }
+}
+
+async fn command_test_client(
+    port: u16,
+    key: String,
+    node_url: String,
+    contract_address: String,
+) -> eyre::Result<()> {
+    // State::init(None, None, key, &node_url, &contract_address)?;
+    let stream = TcpStream::connect(("127.0.0.1", port)).await?;
+    Ok(())
 }
 
 async fn command_add_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
@@ -51,7 +71,8 @@ fn command_remove_songs(folder: String, ids: Vec<String>) -> eyre::Result<()> {
 }
 
 fn command_generate_key() -> eyre::Result<()> {
-    let (key, _wallet) = new_wallet();
+    let wallet = wallet::new_rand();
+    let key = wallet::to_hex_key(&wallet);
     println!("Your secret key is: \"{key}\"");
     Ok(())
 }
@@ -60,19 +81,20 @@ async fn command_distribute(
     folder: String,
     port: u16,
     secret_key: String,
-    iota_address: String,
+    node_url: String,
+    contract_address: String,
 ) -> eyre::Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
-    State::init(&folder, port, secret_key, &iota_address)?;
 
-    let listener = TcpListener::bind(String::from("localhost:") + &State::get().port.to_string())
-        .await
-        .unwrap();
+    let state =
+        DistributionState::new(&folder, port, &secret_key, &node_url, &contract_address)?.leak();
+
+    let listener = TcpListener::bind(("127.0.0.1", state.port)).await.unwrap();
 
     while let Ok((stream, addr)) = listener.accept().await {
         let _ = tokio::task::spawn(async move {
-            if let Err(e) = handle_incoming_tcp_connection(stream, addr).await {
+            if let Err(e) = handle_incoming_tcp_connection(stream, addr, state).await {
                 warn!("Handler exited with an error: {}", e);
             }
         });
@@ -85,6 +107,7 @@ async fn command_distribute(
 async fn handle_incoming_tcp_connection(
     mut stream: TcpStream,
     _addr: SocketAddr,
+    state: &DistributionState,
 ) -> eyre::Result<()> {
     let bytes_read = {
         let mut bytes_read = Vec::with_capacity(256);
@@ -107,7 +130,7 @@ async fn handle_incoming_tcp_connection(
         fallback: todo!(),
     };
 
-    let chunks = State::folder().read_chunks("song_id", 10, 10)?;
+    let chunks = state.folder.read_chunks("song_id", 10, 10)?;
     stream.write(&chunks).await?;
     stream.flush().await?;
 

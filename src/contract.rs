@@ -7,8 +7,6 @@ use ethers::{
 };
 use ethers_providers::{Http, Provider};
 
-static CONTRACT_ADDRESS: &'static str = "TODO";
-
 // Generates a custom type-safe contract
 abigen! {
     IotaMssContract,
@@ -17,11 +15,18 @@ abigen! {
 
 pub type SignedIotaMssContract = IotaMssContract<SignerMiddleware<Provider<Http>, LocalWallet>>;
 
-impl SignedIotaMssContract {
-    pub fn new_signed(raw_client: Provider<Http>, wallet: Wallet<SigningKey>) -> Self {
-        IotaMssContract::new(
-            Address::from_str(CONTRACT_ADDRESS).unwrap(),
-            Arc::new(SignerMiddleware::new(raw_client.clone(), wallet)),
-        )
-    }
+
+pub fn new_signed(
+    raw_client: Provider<Http>,
+    wallet: Wallet<SigningKey>,
+    contract_address: &str,
+) -> SignedIotaMssContract {
+    IotaMssContract::new(
+        Address::from_str(contract_address).unwrap(),
+        Arc::new(SignerMiddleware::new(raw_client.clone(), wallet)),
+    )
+}
+
+pub fn new_raw(node_url: &str) -> eyre::Result<Provider<Http>> {
+    Ok(Provider::try_from(node_url)?)
 }

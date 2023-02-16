@@ -1,5 +1,9 @@
 use clap::Parser;
 
+static DEFAULT_PORT: &'static str = "3000";
+static DEFAULT_NODE_URL: &'static str = "http://default_node_url.com";
+static DEFAULT_CONTRACT_ADDRESS: &'static str = "default_contract_address";
+
 #[derive(Parser, Debug)]
 #[command(
     name = "Iota-Mss distribution client",
@@ -8,6 +12,23 @@ use clap::Parser;
     about = "A distribution client for Iota-Mss"
 )]
 pub enum Command {
+    TestClient {
+        /// Hexadecimally encoded secret key.
+        #[arg(short, long)]
+        key: String,
+
+        /// The port to which to connect.
+        #[arg(short, long, default_value = DEFAULT_PORT)]
+        port: u16,
+
+        /// The IotaMss server http address.
+        #[arg(short, long, default_value = DEFAULT_PORT)]
+        node_url: String,
+
+        /// The smart-contract's address to connect to.
+        #[arg(short, long, default_value = DEFAULT_CONTRACT_ADDRESS)]
+        contract_address: String,
+    },
     /// Download and add a song for distribution.
     Add {
         /// The folder into which to download the song.
@@ -30,10 +51,6 @@ pub enum Command {
     },
     /// Start a server to distributing.
     Distribute {
-        /// The port on which to serve.
-        #[arg(short, long)]
-        port: u16,
-
         /// The folder from which to serve.
         #[arg(short, long)]
         folder: String,
@@ -42,9 +59,17 @@ pub enum Command {
         #[arg(short, long)]
         key: String,
 
+        /// The port on which to serve.
+        #[arg(short, long, default_value = DEFAULT_PORT)]
+        port: u16,
+
         /// The IotaMss server http address.
-        #[arg(short, long)]
-        iota_address: String,
+        #[arg(short, long, default_value = DEFAULT_NODE_URL)]
+        node_url: String,
+
+        /// The smart-contract's address to connect to.
+        #[arg(short, long, default_value = DEFAULT_CONTRACT_ADDRESS)]
+        contract_address: String,
     },
     /// Generate a new hex-encoded secret key for the wallet.
     Generate,
