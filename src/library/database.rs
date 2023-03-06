@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::sync::Arc;
+
 
 use color_eyre::Report;
 // use deadpool_sqlite::{Manager, Pool, PoolConfig, Runtime};
@@ -7,12 +7,12 @@ use futures::executor::block_on;
 use once_cell::sync::OnceCell;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{query_as, Pool, Sqlite};
+use sqlx::{Pool, Sqlite};
 static CHUNK_BYTES: u32 = 32_766;
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    
     // use rusqlite::Connection;
 
     // #[test]

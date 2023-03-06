@@ -2,21 +2,11 @@ use super::{abi::TangleTunesAbi, crypto::Wallet};
 use ethers::{
     abi::{Function, Token},
     prelude::*,
-    prelude::{abigen, builders::ContractCall, NonceManagerMiddleware, SignerMiddleware},
-    signers::{LocalWallet, Signer},
-    types::{
-        transaction::eip2718::TypedTransaction, Address, Transaction, TransactionReceipt,
-        TransactionRequest, H160, U256,
-    },
+    signers::LocalWallet,
+    types::{Address, Transaction, TransactionReceipt, U256},
 };
-use ethers_providers::{Http, Middleware, PendingTransaction, Provider, ProviderError};
+use ethers_providers::{Http, Middleware, Provider};
 use std::{str::FromStr, sync::Arc};
-
-// abigen! {
-//     TangleTunesAbi,
-//     "../smart_contract/abi/contracts/TangleTunes.sol/TangleTunes.json"
-//     // "https://raw.githubusercontent.com/DanielMelero/IOTA-MSS/a2a7fe394601b672fd89fed4e3089b732aea5eaa/contract/Platform.abi";
-// }
 
 #[derive(Debug)]
 pub struct TangleTunesClient {
@@ -109,11 +99,6 @@ impl TangleTunesClient {
 
 #[cfg(test)]
 mod test {
-    use ethers::abi::AbiEncode;
-
-    use super::*;
-    use crate::crypto;
-    use std::process::Output;
 
     // #[tokio::test]
     // async fn deposit_money_to_wallet() {

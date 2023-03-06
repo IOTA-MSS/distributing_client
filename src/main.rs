@@ -66,7 +66,7 @@ async fn _main(args: Arguments) -> eyre::Result<()> {
                 }
             }
         }
-        Command::AddSongs { song_ids } => {
+        Command::AddSongs { song_ids: _ } => {
             todo!()
         }
         Command::Distribute => {
