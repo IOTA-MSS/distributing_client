@@ -1,104 +1,50 @@
-use std::path::Path;
-
-
-use color_eyre::Report;
-// use deadpool_sqlite::{Manager, Pool, PoolConfig, Runtime};
+use crate::BYTES_PER_CHUNK;
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, Sqlite};
-static CHUNK_BYTES: u32 = 32_766;
+use std::path::Path;
 
-#[cfg(test)]
-mod test {
-    
-    // use rusqlite::Connection;
-
-    // #[test]
-    // fn chunking_is_correct() {
-    //     let folder = MusicFolder::init("", "mp3/").unwrap();
-
-    //     let chunks = folder.read_chunks("sample_2mb", 0, 50).unwrap();
-    //     assert_eq!(chunks.len(), 50 * CHUNK_BYTES);
-
-    //     let _ = folder.read_chunks("sample_2mb", 0, 80).unwrap();
-    //     assert_eq!(chunks.len(), 80 * CHUNK_BYTES);
-
-    //     let chunks = folder.read_chunks("sample_2mb", 10, 20).unwrap();
-    //     assert_eq!(chunks.len(), 20 * CHUNK_BYTES);
-
-    //     let _ = folder.read_chunks("sample_2mb", 30, 50).unwrap();
-    //     assert_eq!(chunks.len(), 50 * CHUNK_BYTES);
-    // }
-
-    // #[tokio::test]
-    // async fn sqlite_test() -> eyre::Result<()> {
-    //     let connection = Connection::open("database.sqlite")?;
-    //     connection.execute(
-    //         "
-    //     CREATE TABLE IF NOT EXISTS songs (
-    //         id TEXT NOT NULL UNIQUE,
-    //         name TEXT NOT NULL,
-    //         fee FLOAT NOT NULL,
-    //         data BLOB NOT NULL
-    //     );
-    //     ",
-    //         (),
-    //     )?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // async fn insert_song_test() -> eyre::Result<()> {
-    //     let db = Database::open("database.sqlite").await?;
-    //     let data = std::fs::read("sample_2mb.mp3").unwrap();
-    //     db.add_song("song_id3", Some("song_name"), 10.8, &data)?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // async fn delete_song_test() -> eyre::Result<()> {
-    //     let db = Database::open("database.sqlite").await?;
-    //     db.remove_song("song_id")?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // async fn read_data() -> eyre::Result<()> {
-    //     let db = Database::open("database.sqlite").await?;
-    //     let _ = dbg!(db.read_chunks("song_id3", 0, 1));
-    //     Ok(())
-    // }
-}
-
-static POOL: OnceCell<Pool<Sqlite>> = OnceCell::new();
-
+static DATABASE_POOL: OnceCell<Pool<Sqlite>> = OnceCell::new();
 #[derive(Debug, Clone, Copy)]
 pub struct Database {
     pool: &'static Pool<Sqlite>,
 }
 
 impl Database {
-    async fn aquire(&self) -> eyre::Result<PoolConnection<Sqlite>> {
-        Ok(self.pool.acquire().await?)
-    }
-
-    async fn open_db(path: impl AsRef<Path>, size: u32) -> eyre::Result<Pool<Sqlite>> {
-        let pool = SqlitePoolOptions::new()
+    async fn new_pool(path: impl AsRef<Path>, size: u32) -> eyre::Result<Pool<Sqlite>> {
+        Ok(SqlitePoolOptions::new()
             .max_connections(size)
             .connect_with(
                 SqliteConnectOptions::new()
                     .filename(path)
                     .create_if_missing(true),
             )
-            .await?;
+            .await?)
+    }
 
+    /// Initializes the database.
+    pub async fn initialize(path: impl AsRef<Path>) -> eyre::Result<Self> {
+        let database = Self {
+            pool: DATABASE_POOL.get_or_try_init(|| block_on(Self::new_pool(path, 10)))?,
+        };
+        database.create_tables().await?;
+        Ok(database)
+    }
+
+    /// Acquire a connection to the database-pool.
+    async fn acquire(&self) -> eyre::Result<PoolConnection<Sqlite>> {
+        Ok(self.pool.acquire().await?)
+    }
+
+    /// Creates all tables if they do not yet exist
+    pub async fn create_tables(&self) -> eyre::Result<()> {
         sqlx::query(
             "
             CREATE TABLE IF NOT EXISTS songs (
                 id TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
+                distributing BOOL NOT NULL,
                 data BLOB NOT NULL
             );
     
@@ -108,47 +54,14 @@ impl Database {
             );
             ",
         )
-        .execute(&mut pool.acquire().await?)
-        .await?;
-
-        Ok(pool)
-    }
-
-    /// This should not be used in production since this leaks resources.
-    #[cfg(test)]
-    async fn initialize_for_test(path: &str) -> eyre::Result<Self> {
-        let pool = Box::leak(Box::new(Self::open_db(path, 1).await?));
-        let db = Database { pool };
-        Ok(db)
-    }
-
-    pub async fn initialize(path: impl AsRef<Path>) -> eyre::Result<Self> {
-        let pool = POOL.get_or_try_init(|| {
-            block_on(async move {
-                let pool = Self::open_db(path, 10).await?;
-                Ok::<_, Report>(pool)
-            })
-        })?;
-
-        // dbg!(initialized_now);
-
-        let db = Database { pool };
-        Ok(db)
-    }
-
-    pub async fn reset(&self) -> eyre::Result<()> {
-        sqlx::query(
-            "
-        DELETE * FROM songs;
-        DELETE * FROM key;
-        ",
-        )
-        .execute(&mut self.aquire().await?)
+        .execute(&mut self.acquire().await?)
         .await?;
 
         Ok(())
     }
 
+    /// Sets the private key in the database.
+    /// Stores whether the key is encrypted.
     pub async fn set_key(&self, key: &str, encrypted: bool) -> eyre::Result<()> {
         sqlx::query(
             "
@@ -158,40 +71,55 @@ impl Database {
         )
         .bind(key)
         .bind(encrypted)
-        .execute(&mut self.aquire().await?)
+        .execute(&mut self.acquire().await?)
         .await?;
 
         Ok(())
     }
 
+    /// Get the private key from the database and whether it is encrypted.
     pub async fn get_key(&self) -> eyre::Result<Option<(String, bool)>> {
         let row = sqlx::query_as::<_, (String, bool)>(
             "
             SELECT key, encrypted FROM key;
             ",
         )
-        .fetch_optional(&mut self.aquire().await?)
+        .fetch_optional(&mut self.acquire().await?)
         .await?;
 
         Ok(row)
     }
 
+    pub async fn set_distribution(&self, song_id: &str, distribute: bool) -> eyre::Result<()> {
+        sqlx::query(
+            "
+            UPDATE songs SET distributing = ?1 WHERE id = $2;
+            ",
+        )
+        .bind(distribute)
+        .bind(song_id)
+        .execute(&mut self.acquire().await?)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Add a song to the database
     pub async fn add_song(
         &self,
         id: &str,
-        name: Option<&str>,
+        distributing: bool,
         song_data: &[u8],
     ) -> eyre::Result<()> {
-        let name = name.unwrap_or("UNNAMED");
         sqlx::query(
             "
-            INSERT INTO songs (id, name, data) VALUES (?1, ?2, ?4);
+            INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
             ",
         )
         .bind(id)
-        .bind(name)
+        .bind(distributing)
         .bind(song_data)
-        .execute(&mut self.aquire().await?)
+        .execute(&mut self.acquire().await?)
         .await?;
 
         Ok(())
@@ -204,7 +132,7 @@ impl Database {
             ",
         )
         .bind(id)
-        .execute(&mut self.aquire().await?)
+        .execute(&mut self.acquire().await?)
         .await?;
 
         if res.rows_affected() == 1 {
@@ -214,27 +142,138 @@ impl Database {
         }
     }
 
-    pub async fn read_chunks(
+    /// Get the chunks from (chunk_start, chunk_start + chunks) if they exist.
+    pub async fn get_chunks(
         &self,
         id: &str,
-        start_at: u32,
+        chunk_start: u32,
         chunks: u32,
-    ) -> eyre::Result<(Vec<u8>, f32)> {
-        let byte_offset = (start_at * CHUNK_BYTES) + 1; // First char/byte has i=1 in sqlite
-        let byte_len = chunks * CHUNK_BYTES;
+    ) -> eyre::Result<(Vec<u8>, bool)> {
+        let byte_start = (chunk_start * BYTES_PER_CHUNK) + 1; // First char/byte has i=1 in sqlite
+        let bytes = chunks * BYTES_PER_CHUNK;
 
-        let row = sqlx::query_as::<_, (Vec<u8>, f32)>(
+        let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
             "
-            SELECT substr(data, ?1, ?2), fee
+            SELECT substr(data, ?1, ?2), distributing
             FROM songs WHERE id = ?3
             ",
         )
-        .bind(byte_offset)
-        .bind(byte_len)
+        .bind(byte_start)
+        .bind(bytes)
         .bind(id)
-        .fetch_one(&mut self.aquire().await?)
+        .fetch_one(&mut self.acquire().await?)
         .await?;
 
         Ok(row)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::TEST_SONG_HEX_ID;
+
+    use super::*;
+
+    impl Database {
+        async fn drop_tables(&self) -> eyre::Result<()> {
+            sqlx::query(
+                "
+        DROP TABLE songs;
+        DROP TABLE key;
+        ",
+            )
+            .execute(&mut self.acquire().await?)
+            .await?;
+
+            Ok(())
+        }
+
+        async fn initialize_in_memory() -> eyre::Result<Self> {
+            let pool = Box::leak(Box::new(Self::new_pool(":memory:", 1).await?));
+            let database = Self { pool };
+            database.create_tables().await?;
+            Ok(database)
+        }
+    }
+
+    #[tokio::test]
+    async fn chunking_is_correct() -> eyre::Result<()> {
+        let db = Database::initialize_in_memory().await?;
+        let song_data = std::fs::read(
+            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+        )?;
+        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
+
+        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 0, 50).await?;
+        assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
+
+        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 0, 80).await?;
+        assert_eq!(chunks.len(), 2113939);
+        assert!(chunks.len() < 80 * BYTES_PER_CHUNK as usize);
+
+        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 10, 20).await?;
+        assert_eq!(
+            chunks,
+            song_data[10 * BYTES_PER_CHUNK as usize..30 * BYTES_PER_CHUNK as usize]
+        );
+
+        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 30, 50).await?;
+        assert_eq!(
+            chunks[0..20 * BYTES_PER_CHUNK as usize],
+            song_data[30 * BYTES_PER_CHUNK as usize..50 * BYTES_PER_CHUNK as usize]
+        );
+        assert!(chunks.len() < 50 * BYTES_PER_CHUNK as usize);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn add_remove_song() -> eyre::Result<()> {
+        let db = Database::initialize_in_memory().await?;
+
+        assert_eq!(db.remove_song(TEST_SONG_HEX_ID).await?, false);
+
+        let song_data = std::fs::read(
+            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+        )?;
+        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
+        let (db_data, distribute) = db.get_chunks(TEST_SONG_HEX_ID, 0, 100).await?;
+        assert!(distribute);
+        assert_eq!(song_data, db_data);
+
+        assert_eq!(db.remove_song(TEST_SONG_HEX_ID).await?, true);
+        assert!(db.get_chunks(TEST_SONG_HEX_ID, 0, 100).await.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn set_get_key() -> eyre::Result<()> {
+        let db = Database::initialize_in_memory().await?;
+
+        assert_eq!(db.get_key().await?, None);
+        db.set_key("test", false).await?;
+        assert_eq!(db.get_key().await?, Some(("test".to_string(), false)));
+        db.set_key("test2", false).await?;
+        assert_eq!(db.get_key().await?, Some(("test2".to_string(), false)));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn set_distribution() -> eyre::Result<()> {
+        let db = Database::initialize_in_memory().await?;
+        let song_data = std::fs::read(
+            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+        )?;
+        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
+
+        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, true);
+        db.set_distribution(TEST_SONG_HEX_ID, false).await?;
+        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, false);
+        db.set_distribution(TEST_SONG_HEX_ID, true).await?;
+        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, true);
+
+        Ok(())
     }
 }

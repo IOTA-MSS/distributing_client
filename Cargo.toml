@@ -9,6 +9,7 @@ edition = "2021"
 # Crypto
 ethers = "2.0"
 ethers-providers = "2.0"
+ethers-core = "2.0"
 magic-crypt = "3.1.12"
 
 # Async rust

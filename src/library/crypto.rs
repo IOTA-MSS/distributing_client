@@ -6,16 +6,16 @@ use ethers::{
 use eyre::Context;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
-static CHAIN_ID_IOTA: &'static str =
-    "tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s";
-static CHAIN_ID_ETH: u16 = 9999;
+use crate::CHAIN_ID_ETH;
 
+/// A wrapper around the `LocalWallet`.
 #[derive(Clone, Debug)]
 pub struct Wallet {
     wallet: LocalWallet,
 }
 
 impl Wallet {
+    /// Create the wallet from the hex-encoded secret key.
     pub fn from_private_key(secret: &str) -> eyre::Result<Self> {
         let key = SecretKey::from_be_bytes(&hex::decode(secret)?)?;
         Ok(Self {
@@ -23,29 +23,35 @@ impl Wallet {
         })
     }
 
+    /// Generate a new wallet with a random secret key.
     pub fn generate() -> Self {
         Self {
             wallet: LocalWallet::new(&mut ThreadRng::default()).with_chain_id(CHAIN_ID_ETH),
         }
     }
 
-    pub fn inner(&self) -> &LocalWallet {
+    /// Get the inner `LocalWallet`.
+    pub fn local_wallet(&self) -> &LocalWallet {
         &self.wallet
     }
 
+    /// Get the hex-encoded private key of this wallet.
     pub fn private_key(&self) -> String {
         hex::encode(self.wallet.signer().to_bytes())
     }
 
+    /// Get the address of this wallet.
     pub fn address(&self) -> Address {
         self.wallet.address()
     }
 }
 
+/// Encrypt the hex-encoded secret key with the password.
 pub fn encrypt_private_key(secret_key: &str, password: &str) -> String {
     new_magic_crypt!(password, 256).encrypt_bytes_to_base64(secret_key)
 }
 
+/// Encrypt the encrypted secret key with the password to a hex-encoded secret key.
 pub fn decrypt_private_key(encrypted_key: &str, password: &str) -> eyre::Result<String> {
     Ok(new_magic_crypt!(password, 256)
         .decrypt_base64_to_string(encrypted_key)

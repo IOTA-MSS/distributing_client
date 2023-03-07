@@ -1,22 +1,27 @@
-use super::{abi::TangleTunesAbi, crypto::Wallet};
+use super::{
+    abi::{GetChunksCall, TangleTunesAbi},
+    crypto::Wallet,
+};
 use ethers::{
-    abi::{Function, Token},
+    abi::AbiDecode,
     prelude::*,
     signers::LocalWallet,
-    types::{Address, Transaction, TransactionReceipt, U256},
+    types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt, U256},
 };
 use ethers_providers::{Http, Middleware, Provider};
+use hex::FromHex;
 use std::{str::FromStr, sync::Arc};
 
+/// The client used to connect to the IOTA network.
 #[derive(Debug)]
 pub struct TangleTunesClient {
     raw_client: Provider<Http>,
-    pub client:
+    abi_client:
         TangleTunesAbi<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>>,
 }
 
 impl TangleTunesClient {
-    pub async fn init(
+    pub async fn initialize(
         wallet: &Wallet,
         node_url: &str,
         contract_address: &str,
@@ -24,12 +29,11 @@ impl TangleTunesClient {
         let provider = Provider::try_from(node_url)?;
         let client = NonceManagerMiddleware::new(provider.clone(), wallet.address());
         client.initialize_nonce(None).await?;
-        let client = SignerMiddleware::new(client, wallet.inner().clone());
+        let client = SignerMiddleware::new(client, wallet.local_wallet().clone());
 
         let contract = Self {
-            // wallet,
             raw_client: provider,
-            client: TangleTunesAbi::new(
+            abi_client: TangleTunesAbi::new(
                 Address::from_str(contract_address).unwrap(),
                 Arc::new(client),
             ),
@@ -37,9 +41,45 @@ impl TangleTunesClient {
         Ok(contract)
     }
 
-    pub async fn deposit(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
+    pub fn get_chunks_call(
+        &self,
+        song_id: &str,
+        from: u32,
+        amount: u32,
+        distributor: Address,
+    ) -> eyre::Result<
+        FunctionCall<
+            Arc<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>>,
+            SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>,
+            (),
+        >,
+    > {
         Ok(self
-            .client
+            .abi_client
+            .get_chunks(
+                FromHex::from_hex(song_id)?,
+                from.into(),
+                amount.into(),
+                distributor,
+            )
+            .legacy()
+            .gas(100_000))
+    }
+
+    pub async fn send_raw_tx(
+        &self,
+        tx: impl Into<TypedTransaction> + Send + Sync,
+    ) -> eyre::Result<Option<TransactionReceipt>> {
+        Ok(self.raw_client.send_transaction(tx, None).await?.await?)
+    }
+
+    pub fn decode_get_chunks_call(&self, input_data: &[u8]) -> eyre::Result<GetChunksCall> {
+        Ok(AbiDecode::decode(input_data)?)
+    }
+
+    pub async fn call_deposit(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
+        Ok(self
+            .abi_client
             .deposit()
             .value(amount)
             .legacy()
@@ -48,46 +88,20 @@ impl TangleTunesClient {
             .await?)
     }
 
-    pub async fn send_raw_tx(&self, tx: &Transaction) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self.raw_client.send_transaction(tx, None).await?.await?)
-    }
-
-    fn get_contract_function(&self, name: &str) -> eyre::Result<&Function> {
-        Ok(self.client.abi().function(name)?)
-    }
-
-    pub fn decode_chunk_tx_input(&self, input_data: &[u8]) -> eyre::Result<(String, u32, u32)> {
-        let res = self
-            .get_contract_function("chunks")?
-            .decode_input(input_data)?;
-
-        let Some(Token::String(id)) = res.get(0) else {
-            Err(eyre!("Invalid chunk tx: {res:?} from {input_data:?}"))?
-        };
-        let Some(Token::Uint(from)) = res.get(1) else {
-            Err(eyre!("Invalid chunk tx: {res:?} from {input_data:?}"))?
-        };
-        let Some(Token::Uint(chunks)) = res.get(2) else {
-            Err(eyre!("Invalid chunk tx: {res:?} from {input_data:?}"))?
-         };
-
-        Ok((id.to_owned(), from.as_u32(), chunks.as_u32()))
-    }
-
-    pub async fn users(
+    pub async fn call_users(
         &self,
         address: Address,
     ) -> eyre::Result<(bool, String, String, String, U256, bool)> {
-        Ok(self.client.users(address).await?)
+        Ok(self.abi_client.users(address).await?)
     }
 
-    pub async fn create_account(
+    pub async fn call_create_user(
         &self,
         name: &str,
         description: &str,
     ) -> eyre::Result<Option<TransactionReceipt>> {
         Ok(self
-            .client
+            .abi_client
             .create_user(String::from(name), String::from(description))
             .legacy()
             .gas(100_000)
@@ -95,59 +109,74 @@ impl TangleTunesClient {
             .await?
             .await?)
     }
+
+    pub(crate) fn address(&self) -> Address {
+        self.abi_client.address()
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use ethers::abi::{AbiEncode, Address};
+    use hex::FromHex;
 
-    // #[tokio::test]
-    // async fn deposit_money_to_wallet() {
-    //     let wallet = Wallet::from_private_key(DEFAULT_SECRET).unwrap();
-    //     let wallet = wallet::generate_new();
+    use crate::{library::crypto::Wallet, TEST_SONG_HEX_ID, TEST_SONG_ID_SLICE};
 
-    //     let contract =
-    //         TangleTunesClient::init(wallet.clone(), DEFAULT_NODE_URL, DEFAULT_CONTRACT_ADDRESS)
-    //             .await
-    //             .unwrap();
+    #[tokio::test]
+    async fn deposit_money_to_wallet() {
+        let wallet = Wallet::generate();
 
-    //     let address = contract.wallet_address();
-    //     send_funds_to(&address, 1000).await;
-    //     contract.users(address).await.unwrap();
-    //     contract
-    //         .create_account("Testing", "Test account")
-    //         .await
-    //         .unwrap();
-    //     contract.users(address).await.unwrap();
-    // }
+        // let client = TangleTunesClient::initialize(&wallet, TEST_NODE_URL, TEST_CONTRACT_ADDRESS)
+        //     .await
+        //     .unwrap(); TODO: Rewrite this test
 
-    // #[tokio::test]
-    // async fn test() {
-    //     // let call: ContractCall<_, ()> = self
-    //     //     .client
-    //     //     .get_chunk(
-    //     //         [
-    //     //             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    //     //             0, 0, 0, 0, 0, 0,
-    //     //         ],
-    //     //         10.into(),
-    //     //     )
-    //     //     .legacy();
-    //     // let TypedTransaction::Legacy(tx) = call.tx else {
-    //     //     panic!();
-    //     // };
-    // }
+        // let address = client.client.address();
+        // send_funds_to(&address, 1000).await;
+        // client.call_users(address).await.unwrap();
+        // client
+        //     .call_create_user("Testing", "Test account")
+        //     .await
+        //     .unwrap();
+        // client.call_users(address).await.unwrap();
+    }
 
-    // async fn send_funds_to(address: &Address, amount: u64) -> Output {
-    //     tokio::process::Command::new("wasp-cli")
-    //         .arg("chain")
-    //         .arg("deposit")
-    //         .arg(address.encode_hex())
-    //         .arg("--chain=testchain")
-    //         .arg("base")
-    //         .arg(":")
-    //         .arg(amount.to_string())
-    //         .output()
-    //         .await
-    //         .unwrap()
-    // }
+    #[test]
+    fn hex_encode() {
+        use hex::ToHex;
+        let hex_id = ToHex::encode_hex::<String>(&TEST_SONG_ID_SLICE);
+        assert_eq!(&hex_id, TEST_SONG_HEX_ID);
+        let new_song_id: Vec<u8> = FromHex::from_hex(&hex_id).unwrap();
+        assert_eq!(&TEST_SONG_ID_SLICE, new_song_id.as_slice());
+    }
+
+    #[tokio::test]
+    async fn test() {
+        // let call: ContractCall<_, ()> = self
+        //     .client
+        //     .get_chunk(
+        //         [
+        //             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        //             0, 0, 0, 0, 0, 0,
+        //         ],
+        //         10.into(),
+        //     )
+        //     .legacy();
+        // let TypedTransaction::Legacy(tx) = call.tx else {
+        //     panic!();
+        // };
+    }
+
+    async fn send_funds_to(address: &Address, amount: u64) -> std::process::Output {
+        tokio::process::Command::new("wasp-cli")
+            .arg("chain")
+            .arg("deposit")
+            .arg(address.encode_hex())
+            .arg("--chain=testchain")
+            .arg("base")
+            .arg(":")
+            .arg(amount.to_string())
+            .output()
+            .await
+            .unwrap()
+    }
 }
