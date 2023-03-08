@@ -31,17 +31,21 @@ impl Config {
         config_path
     }
 
+    pub async fn initialize_client(
+        &self,
+        database: &Database,
+    ) -> eyre::Result<&'static TangleTunesClient> {
+        let wallet = self.decrypt_wallet(&database).await?;
+        let client =
+            TangleTunesClient::initialize(wallet, &self.file.node_url, &self.file.contract_address)
+                .await?;
+        Ok(&*Box::leak(Box::new(client)))
+    }
+
     pub async fn initialize_database(&self) -> eyre::Result<Database> {
         let mut path = self.get_dir();
         path.push(&self.file.database_path);
         Database::initialize(path).await
-    }
-
-    pub async fn initialize_client(&self, wallet: &Wallet) -> eyre::Result<TangleTunesClient> {
-        Ok(
-            TangleTunesClient::initialize(wallet, &self.file.node_url, &self.file.contract_address)
-                .await?,
-        )
     }
 
     pub async fn decrypt_wallet(&self, db: &Database) -> eyre::Result<Wallet> {
@@ -159,7 +163,27 @@ pub enum Command {
     },
 
     Listen {
+        #[arg(long, short = 'P')]
+        port: u16,
+    },
+
+    CreateAccount {
         #[arg(long, short)]
-        port: u16
+        name: String,
+
+        #[arg(long, short)]
+        description: Option<String>,
+    },
+
+    DeleteAccount,
+
+    Deposit {
+        #[arg(long, short)]
+        amount: u64,
+    },
+
+    Withdraw {
+        #[arg(long, short)]
+        amount: u64,
     },
 }

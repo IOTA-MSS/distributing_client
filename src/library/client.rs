@@ -1,3 +1,5 @@
+use crate::CHAIN_ID_ETH;
+
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
@@ -7,54 +9,59 @@ use ethers::{
     prelude::*,
     signers::LocalWallet,
     types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt, U256},
+    utils::rlp::{Decodable, Rlp},
 };
 use ethers_providers::{Http, Middleware, Provider};
 use hex::FromHex;
-use std::{str::FromStr, sync::Arc};
+use std::{ops::Deref, str::FromStr, sync::Arc};
 
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
 pub struct TangleTunesClient {
-    raw_client: Provider<Http>,
-    abi_client:
+    pub abi_client:
         TangleTunesAbi<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>>,
+    wallet: Wallet,
 }
 
 impl TangleTunesClient {
+    pub fn wallet(&self) -> &Wallet {
+        &self.wallet
+    }
+
     pub async fn initialize(
-        wallet: &Wallet,
+        wallet: Wallet,
         node_url: &str,
         contract_address: &str,
     ) -> eyre::Result<Self> {
-        let provider = Provider::try_from(node_url)?;
-        let client = NonceManagerMiddleware::new(provider.clone(), wallet.address());
-        client.initialize_nonce(None).await?;
-        let client = SignerMiddleware::new(client, wallet.local_wallet().clone());
-
         let contract = Self {
-            raw_client: provider,
             abi_client: TangleTunesAbi::new(
                 Address::from_str(contract_address).unwrap(),
-                Arc::new(client),
+                Arc::new(SignerMiddleware::new(
+                    NonceManagerMiddleware::new(Provider::try_from(node_url)?, wallet.address()),
+                    wallet.local_wallet().clone(),
+                )),
             ),
+            wallet,
         };
+
+        contract
+            .abi_client
+            .client_ref()
+            .inner()
+            .initialize_nonce(None)
+            .await?;
+
         Ok(contract)
     }
 
-    pub fn get_chunks_call(
+    pub async fn create_get_chunks_signed_tx_rlp(
         &self,
         song_id: &str,
-        from: u32,
-        amount: u32,
+        from: usize,
+        amount: usize,
         distributor: Address,
-    ) -> eyre::Result<
-        FunctionCall<
-            Arc<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>>,
-            SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>,
-            (),
-        >,
-    > {
-        Ok(self
+    ) -> eyre::Result<Bytes> {
+        let mut tx = self
             .abi_client
             .get_chunks(
                 FromHex::from_hex(song_id)?,
@@ -63,18 +70,30 @@ impl TangleTunesClient {
                 distributor,
             )
             .legacy()
-            .gas(100_000))
+            .gas(100_000)
+            .tx;
+
+        tx.set_nonce(self.abi_client.client_ref().inner().next());
+
+        dbg!(tx.nonce());
+        let rlp = tx.rlp_signed(&self.wallet.local_wallet().sign_transaction_sync(&tx));
+
+        Ok(rlp)
     }
 
-    pub async fn send_raw_tx(
-        &self,
-        tx: impl Into<TypedTransaction> + Send + Sync,
-    ) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self.raw_client.send_transaction(tx, None).await?.await?)
+    pub fn decode_get_chunks_tx_rlp(&self, tx_rlp: &[u8]) -> eyre::Result<GetChunksCall> {
+        let tx = TypedTransaction::decode(&Rlp::new(tx_rlp))?;
+        Ok(AbiDecode::decode(tx.data().unwrap())?)
     }
 
-    pub fn decode_get_chunks_call(&self, input_data: &[u8]) -> eyre::Result<GetChunksCall> {
-        Ok(AbiDecode::decode(input_data)?)
+    pub async fn send_raw_tx(&self, rlp: Bytes) -> eyre::Result<Option<TransactionReceipt>> {
+        Ok(self
+            .abi_client
+            .deref()
+            .client()
+            .send_raw_transaction(rlp)
+            .await?
+            .await?)
     }
 
     pub async fn call_deposit(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
@@ -82,27 +101,43 @@ impl TangleTunesClient {
             .abi_client
             .deposit()
             .value(amount)
+            .gas(100_000)
             .legacy()
             .send()
             .await?
             .await?)
     }
 
-    pub async fn call_users(
-        &self,
-        address: Address,
-    ) -> eyre::Result<(bool, String, String, String, U256, bool)> {
-        Ok(self.abi_client.users(address).await?)
+    pub async fn call_withdraw(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
+        Ok(self
+            .abi_client
+            .withdraw(amount.into())
+            .gas(100_000)
+            .legacy()
+            .send()
+            .await?
+            .await?)
+    }
+
+    pub async fn call_delete_user(&self) -> eyre::Result<Option<TransactionReceipt>> {
+        Ok(self
+            .abi_client
+            .delete_user()
+            .legacy()
+            .gas(100_000)
+            .send()
+            .await?
+            .await?)
     }
 
     pub async fn call_create_user(
         &self,
-        name: &str,
-        description: &str,
+        name: String,
+        description: String,
     ) -> eyre::Result<Option<TransactionReceipt>> {
         Ok(self
             .abi_client
-            .create_user(String::from(name), String::from(description))
+            .create_user(name, description)
             .legacy()
             .gas(100_000)
             .send()

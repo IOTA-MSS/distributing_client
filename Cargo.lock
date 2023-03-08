@@ -2859,6 +2859,7 @@ dependencies = [
 name = "tangle-tunes-distributor"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "clap",
  "color-eyre",
  "ethers",
@@ -2867,12 +2868,15 @@ dependencies = [
  "eyre",
  "futures",
  "hex",
+ "itertools",
  "magic-crypt",
+ "num-integer",
  "once_cell",
  "serde",
  "sqlx",
  "tokio",
  "tokio-rustls",
+ "tokio-util",
  "toml 0.7.2",
  "tracing",
  "tracing-subscriber",

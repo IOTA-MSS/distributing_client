@@ -49,6 +49,7 @@ async fn set_key_with_confirmation(
         None => (key, false),
     };
     db.set_key(&key, encrypted).await?;
+    
     Ok(())
 }
 
