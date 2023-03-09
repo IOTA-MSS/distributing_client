@@ -1,7 +1,7 @@
-use crate::library::config::Config;
+use crate::library::app::App;
 
-pub async fn create(name: String, description: Option<String>, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn create(name: String, description: Option<String>, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
     dbg!(client
         .create_user(name, description.unwrap_or("".to_string()))
@@ -10,24 +10,24 @@ pub async fn create(name: String, description: Option<String>, cfg: Config) -> e
     Ok(())
 }
 
-pub async fn delete(cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn delete(cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
     client.delete_user().await?;
     println!("Succesfully deleted user!");
     Ok(())
 }
 
-pub async fn deposit(amount: u64, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn deposit(amount: u64, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
     client.deposit(amount).await?;
     println!("Succesfully deposited to the smart contract!");
     Ok(())
 }
 
-pub async fn withdraw(amount: u64, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn withdraw(amount: u64, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
     client.withdraw(amount).await?;
     println!("Succesfully withdrew from the smart contract!");

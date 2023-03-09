@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use crate::library::config::Config;
+use crate::library::app::App;
 
-pub async fn remove(ids: Vec<String>, cfg: Config) -> eyre::Result<()> {
-    let db = cfg.initialize_database().await?;
+pub async fn remove(ids: Vec<String>, cfg: App) -> eyre::Result<()> {
+    let db = cfg.database()?;
     for id in &ids {
         if db.remove_song(id).await? {
             println!("Succesfully removed song {id:?}!");
@@ -14,8 +14,8 @@ pub async fn remove(ids: Vec<String>, cfg: Config) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn add_from_path(paths: Vec<String>, distribute: bool, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn add_from_path(paths: Vec<String>, distribute: bool, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     for path in paths {
         let path = PathBuf::from(path);
         let Some(ext) = path.extension() else {
@@ -32,22 +32,22 @@ pub async fn add_from_path(paths: Vec<String>, distribute: bool, cfg: Config) ->
     Ok(())
 }
 
-pub async fn stop_distribution(ids: Vec<String>, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn stop_distribution(ids: Vec<String>, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     for id in ids {
         database.set_distribution(&id, false).await?;
     }
     Ok(())
 }
 
-pub async fn start_distribution(ids: Vec<String>, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn start_distribution(ids: Vec<String>, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     for id in ids {
         database.set_distribution(&id, true).await?;
     }
     Ok(())
 }
 
-pub async fn download(ids: Vec<String>, distribute: bool, cfg: Config) -> eyre::Result<()> {
+pub async fn download(ids: Vec<String>, distribute: bool, cfg: App) -> eyre::Result<()> {
     todo!()
 }

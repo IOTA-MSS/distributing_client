@@ -1,21 +1,20 @@
 use crate::library::{
     client::TangleTunesClient,
-    config::Config,
+    app::App,
     database::Database,
     protocol::{RequestChunksDecoder, SendChunksEncoder},
 };
-use ethers::types::U64;
 use ethers_providers::{StreamExt, PendingTransaction, Http};
 use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
-use std::{collections::VecDeque, net::SocketAddr, time::Duration};
+use std::{collections::VecDeque, net::SocketAddr,};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
-pub async fn run(cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn run(cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
 
-    let listener = TcpListener::bind(("127.0.0.1", cfg.file.port))
+    let listener = TcpListener::bind(("127.0.0.1", cfg.port()))
         .await
         .unwrap();
 

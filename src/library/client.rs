@@ -183,11 +183,11 @@ mod test {
     use ethers::abi::{AbiEncode, Address};
     use hex::FromHex;
 
-    use crate::{library::crypto::Wallet, TEST_CHAIN_ID_ETH, TEST_SONG_HEX_ID, TEST_SONG_ID_SLICE};
+    use crate::{library::crypto::Wallet, test};
 
     #[tokio::test]
     async fn deposit_money_to_wallet() {
-        let wallet = Wallet::generate(TEST_CHAIN_ID_ETH);
+        let wallet = Wallet::generate(test::CHAIN_ID);
 
         // let client = TangleTunesClient::initialize(&wallet, TEST_NODE_URL, TEST_CONTRACT_ADDRESS)
         //     .await
@@ -206,10 +206,10 @@ mod test {
     #[test]
     fn hex_encode() {
         use hex::ToHex;
-        let hex_id = ToHex::encode_hex::<String>(&TEST_SONG_ID_SLICE);
-        assert_eq!(&hex_id, TEST_SONG_HEX_ID);
+        let hex_id = ToHex::encode_hex::<String>(&test::SONG_ID);
+        assert_eq!(&hex_id, test::SONG_HEX_ID);
         let new_song_id: Vec<u8> = FromHex::from_hex(&hex_id).unwrap();
-        assert_eq!(&TEST_SONG_ID_SLICE, new_song_id.as_slice());
+        assert_eq!(&test::SONG_ID, new_song_id.as_slice());
     }
 
     #[tokio::test]

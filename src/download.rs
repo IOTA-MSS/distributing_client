@@ -1,21 +1,20 @@
 use crate::{
     library::{
-        config::Config,
+        app::App,
         protocol::{RequestChunksEncoder, SendChunksDecoder},
     },
     BYTES_PER_CHUNK_USIZE,
 };
 use ethers_providers::StreamExt;
 use futures::SinkExt;
-use itertools::Itertools;
-use std::{fs::OpenOptions, io::Write, iter::repeat};
+use std::{fs::OpenOptions, io::Write};
 use tokio::net::TcpStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const CHUNKS_PER_REQUEST: usize = 5;
 
 pub async fn run(
-    cfg: Config,
+    cfg: App,
     port: u16,
     song_id: String,
     chunk_index: usize,
@@ -27,7 +26,7 @@ pub async fn run(
     let mut read_stream = FramedRead::new(read_stream, SendChunksDecoder::new());
     let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
 
-    let database = cfg.initialize_database().await?;
+    let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
     let distributor_address = client.address();
 
@@ -40,7 +39,12 @@ pub async fn run(
         let request_size = Ord::min(CHUNKS_PER_REQUEST, chunk_amount - this_chunk_index);
 
         let tx_rlp = client
-            .get_chunks_rlp(&song_id, this_chunk_index, request_size, distributor_address)
+            .get_chunks_rlp(
+                &song_id,
+                this_chunk_index,
+                request_size,
+                distributor_address,
+            )
             .await?;
         dbg!(tx_rlp.len());
         write_stream.send(&tx_rlp.0).await?;
@@ -49,7 +53,7 @@ pub async fn run(
         while chunks_received < request_size {
             let (start_chunk_id, chunks) = read_stream.next().await.unwrap()?;
             dbg!((start_chunk_id, chunks.len()));
-    
+
             for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
                 chunks_received += 1;
                 song_buffer[chunk_id as usize] = Some(chunk.to_vec());

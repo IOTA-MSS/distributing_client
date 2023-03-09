@@ -58,9 +58,8 @@ pub fn decrypt_private_key(encrypted_key: &str, password: &str) -> eyre::Result<
 
 #[cfg(test)]
 mod test {
-    use crate::TEST_CHAIN_ID_ETH;
-
     use super::*;
+    use crate::test;
 
     #[test]
     fn encrypt_decrypt_correct() {
@@ -84,8 +83,8 @@ mod test {
 
     #[test]
     fn generating_and_importing() {
-        let wallet1 = Wallet::generate(TEST_CHAIN_ID_ETH);
-        let wallet2 = Wallet::from_private_key(&wallet1.private_key(), TEST_CHAIN_ID_ETH).unwrap();
+        let wallet1 = Wallet::generate(test::CHAIN_ID);
+        let wallet2 = Wallet::from_private_key(&wallet1.private_key(), test::CHAIN_ID).unwrap();
 
         assert_eq!(wallet1.address(), wallet2.address());
         assert_eq!(wallet1.private_key(), wallet2.private_key());

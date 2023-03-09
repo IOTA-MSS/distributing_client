@@ -1,31 +1,31 @@
-use crate::library::{config::Config, crypto::Wallet, database::Database};
+use crate::library::{app::App, crypto::Wallet, database::Database};
 use std::io::stdin;
 
-pub async fn generate(password: Option<String>, cfg: Config) -> eyre::Result<()> {
+pub async fn generate(password: Option<String>, cfg: App) -> eyre::Result<()> {
     let key = Wallet::generate(cfg.chain_id()).private_key();
-    let database = cfg.initialize_database().await?;
+    let database = cfg.database()?;
     set_key_with_confirmation(&database, key, password).await?;
 
     Ok(())
 }
 
-pub async fn import(password: Option<String>, key: String, cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn import(password: Option<String>, key: String, cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     set_key_with_confirmation(&database, key, password).await?;
 
     Ok(())
 }
 
-pub async fn export_address(cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn export_address(cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let wallet = cfg.decrypt_wallet(&database).await?;
     println!("Your address: {:?}", wallet.address());
 
     Ok(())
 }
 
-pub async fn export_private_key(cfg: Config) -> eyre::Result<()> {
-    let database = cfg.initialize_database().await?;
+pub async fn export_private_key(cfg: App) -> eyre::Result<()> {
+    let database = cfg.database()?;
     let wallet = cfg.decrypt_wallet(&database).await?;
     println!("Your address: {:?}", wallet.private_key());
 
@@ -49,7 +49,7 @@ async fn set_key_with_confirmation(
         None => (key, false),
     };
     db.set_key(&key, encrypted).await?;
-    
+
     Ok(())
 }
 

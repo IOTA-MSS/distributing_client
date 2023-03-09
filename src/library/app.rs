@@ -1,38 +1,78 @@
 use crate::library::client::TangleTunesClient;
 use crate::library::crypto::{self, Wallet};
 use crate::library::database::Database;
-use clap::Parser;
 use eyre::Context;
+use futures::executor::block_on;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct Config {
-    pub file: ConfigFile,
-    pub args: Args,
+pub struct App {
+    pub password: Option<String>,
+    pub port: u16,
+    pub contract_address: String,
+    pub node_url: String,
+    pub database_path: PathBuf,
+    pub chain_id: u16,
+    pub database: Option<&'static Database>,
 }
 
-impl Config {
+impl App {
     pub fn chain_id(&self) -> u16 {
-        self.file.chain_id
+        self.chain_id
     }
 
-    pub fn from_args() -> eyre::Result<Self> {
-        let args = Args::parse();
-        let config = std::fs::read_to_string(&args.config_path)
-            .wrap_err(format!("Config does not exist at path {:?}", args))?;
-
-        let config: ConfigFile = toml::from_str(&config)
-            .wrap_err(format!("Could not parse config file at path {:?}", args))?;
-
-        Ok(Self { file: config, args })
+    pub fn node_url(&self) -> &str {
+        &self.node_url
     }
 
-    pub fn get_dir(&self) -> PathBuf {
-        let mut config_path = PathBuf::from(&self.args.config_path);
-        config_path.pop();
-        config_path
+    pub fn contract_address(&self) -> &str {
+        &self.contract_address
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn database_path(&self) -> &PathBuf {
+        &self.database_path
+    }
+
+    pub fn from_config_file(config_path: String, password: Option<String>) -> eyre::Result<Self> {
+        let file = std::fs::read_to_string(&config_path)
+            .wrap_err(format!("Config does not exist at path {:?}", config_path))?;
+        let cfg_file = toml::from_str::<ConfigFile>(&file).wrap_err(format!(
+            "Could not parse config file at path {:?}",
+            config_path
+        ))?;
+
+        let database_path = {
+            let mut database_path = PathBuf::from(&config_path);
+            database_path.pop();
+            database_path.push(&cfg_file.database_path);
+            database_path
+        };
+
+        let cfg = Self {
+            password: password,
+            port: cfg_file.port,
+            contract_address: cfg_file.contract_address,
+            node_url: cfg_file.node_url,
+            database_path,
+            chain_id: cfg_file.chain_id,
+            database: None,
+        };
+
+        Ok(cfg)
+    }
+
+    pub fn database(&self) -> eyre::Result<Database> {
+        if let Some(database) = self.database {
+            Ok(*database)
+        } else {
+            block_on(Database::initialize(self.database_path()))
+        }
     }
 
     pub async fn initialize_client(
@@ -41,26 +81,19 @@ impl Config {
     ) -> eyre::Result<&'static TangleTunesClient> {
         let wallet = self.decrypt_wallet(&database).await?;
         let client =
-            TangleTunesClient::initialize(wallet, &self.file.node_url, &self.file.contract_address)
-                .await?;
+            TangleTunesClient::initialize(wallet, self.node_url(), self.contract_address()).await?;
         Ok(&*Box::leak(Box::new(client)))
-    }
-
-    pub async fn initialize_database(&self) -> eyre::Result<Database> {
-        let mut path = self.get_dir();
-        path.push(&self.file.database_path);
-        Database::initialize(path).await
     }
 
     pub async fn decrypt_wallet(&self, db: &Database) -> eyre::Result<Wallet> {
         if let Some((key, encrypted)) = db.get_key().await? {
-            let key = match (encrypted, &self.args.password) {
+            let key = match (encrypted, &self.password) {
                 (true, Some(password)) => Ok(crypto::decrypt_private_key(&key, &password)?),
                 (false, None) => Ok(key),
                 (true, None) => Err(eyre!("Wallet is encrypted, please give a password.")),
                 (false, Some(_)) => Err(eyre!("Wallet is not encrypted, no password needed.")),
             }?;
-            Ok(Wallet::from_private_key(&key, self.file.chain_id)?)
+            Ok(Wallet::from_private_key(&key, self.chain_id())?)
         } else {
             Err(eyre!("No wallet coupled."))
         }
@@ -69,11 +102,11 @@ impl Config {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigFile {
-    pub port: u16,
-    pub contract_address: String,
-    pub node_url: String,
-    pub database_path: String,
-    pub chain_id: u16
+    port: u16,
+    contract_address: String,
+    node_url: String,
+    database_path: String,
+    chain_id: u16,
 }
 
 #[derive(clap::Parser, Debug, Clone)]
@@ -86,7 +119,7 @@ pub struct ConfigFile {
 pub struct Args {
     /// The path to the configuration file
     #[arg(short, long, default_value = "./TangleTunes.toml", global = true)]
-    pub config_path: String,
+    pub config: String,
 
     /// Then optional password for an encrypted private key
     #[arg(short, long, global = true)]
@@ -186,7 +219,7 @@ pub enum Command {
 
         /// The file-name to output into
         #[arg(long, short)]
-        file: String
+        file: String,
     },
 
     CreateAccount {

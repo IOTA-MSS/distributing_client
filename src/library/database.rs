@@ -170,7 +170,7 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::TEST_SONG_HEX_ID;
+    use crate::test;
 
     use super::*;
 
@@ -202,22 +202,22 @@ mod test {
         let song_data = std::fs::read(
             "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
+        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
 
-        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 0, 50).await?;
+        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 0, 50).await?;
         assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
 
-        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 0, 80).await?;
+        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 0, 80).await?;
         assert_eq!(chunks.len(), 2113939);
         assert!(chunks.len() < 80 * BYTES_PER_CHUNK as usize);
 
-        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 10, 20).await?;
+        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 10, 20).await?;
         assert_eq!(
             chunks,
             song_data[10 * BYTES_PER_CHUNK as usize..30 * BYTES_PER_CHUNK as usize]
         );
 
-        let (chunks, _) = db.get_chunks(TEST_SONG_HEX_ID, 30, 50).await?;
+        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 30, 50).await?;
         assert_eq!(
             chunks[0..20 * BYTES_PER_CHUNK as usize],
             song_data[30 * BYTES_PER_CHUNK as usize..50 * BYTES_PER_CHUNK as usize]
@@ -231,18 +231,18 @@ mod test {
     async fn add_remove_song() -> eyre::Result<()> {
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.remove_song(TEST_SONG_HEX_ID).await?, false);
+        assert_eq!(db.remove_song(test::SONG_HEX_ID).await?, false);
 
         let song_data = std::fs::read(
             "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
-        let (db_data, distribute) = db.get_chunks(TEST_SONG_HEX_ID, 0, 100).await?;
+        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
+        let (db_data, distribute) = db.get_chunks(test::SONG_HEX_ID, 0, 100).await?;
         assert!(distribute);
         assert_eq!(song_data, db_data);
 
-        assert_eq!(db.remove_song(TEST_SONG_HEX_ID).await?, true);
-        assert!(db.get_chunks(TEST_SONG_HEX_ID, 0, 100).await.is_err());
+        assert_eq!(db.remove_song(test::SONG_HEX_ID).await?, true);
+        assert!(db.get_chunks(test::SONG_HEX_ID, 0, 100).await.is_err());
 
         Ok(())
     }
@@ -266,13 +266,13 @@ mod test {
         let song_data = std::fs::read(
             "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(TEST_SONG_HEX_ID, true, &song_data).await?;
+        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
 
-        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, true);
-        db.set_distribution(TEST_SONG_HEX_ID, false).await?;
-        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, false);
-        db.set_distribution(TEST_SONG_HEX_ID, true).await?;
-        assert_eq!(db.get_chunks(TEST_SONG_HEX_ID, 0, 0).await?.1, true);
+        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, true);
+        db.set_distribution(test::SONG_HEX_ID, false).await?;
+        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, false);
+        db.set_distribution(test::SONG_HEX_ID, true).await?;
+        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, true);
 
         Ok(())
     }
