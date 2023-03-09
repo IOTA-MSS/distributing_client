@@ -5,8 +5,8 @@ use crate::library::{
     protocol::{RequestChunksDecoder, SendChunksEncoder},
 };
 use ethers::types::U64;
-use ethers_providers::StreamExt;
-use futures::{future::BoxFuture, SinkExt};
+use ethers_providers::{StreamExt, PendingTransaction, Http};
+use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
 use std::{collections::VecDeque, net::SocketAddr, time::Duration};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{FramedRead, FramedWrite};
@@ -48,19 +48,29 @@ async fn handle_incoming_tcp_connection(
     // The requests from this client that haven't beel fulfilled yet.
     let mut open_requests: VecDeque<(String, i32, i32)> = VecDeque::new();
     // The transactions that will resolve with the amount of credit gained from them.
-    let mut pending_confirmations = VecDeque::<BoxFuture<'static, eyre::Result<i32>>>::new();
-    // FuturesOrdered::<BoxFuture<'static, eyre::Result<i32>>>::new();
+    let mut pending_txs_stage_1 =
+        VecDeque::<BoxFuture<'static, eyre::Result<(PendingTransaction<Http>, i32)>>>::new();
+    let mut pending_txs_stage_2 = FuturesUnordered::<BoxFuture<'static, eyre::Result<i32>>>::new();
 
     'outer: loop {
         let tcp_msg = tokio::select! {
-            Some(new_credit) = async {
-                if let Some(pending_confirmation) = &mut pending_confirmations.front_mut() {
-                    Some(pending_confirmation.await)
+            Some(pending_tx) = async {
+                if let Some(pending_tx) = &mut pending_txs_stage_1.front_mut() {
+                    Some(pending_tx.await)
                 } else {
                     None
                 }
             } => {
-                pending_confirmations.pop_front().unwrap();
+                let (pending_tx, amount) = pending_tx?;
+                pending_txs_stage_1.pop_front().unwrap();
+                pending_txs_stage_2.push(Box::pin(async move {
+                    let _receipt = dbg!(pending_tx.await?.unwrap());
+                    Ok(amount as i32)
+                }));
+                None
+            }
+
+            Some(new_credit) = pending_txs_stage_2.next() => {
                 credit = credit.checked_add(new_credit?).unwrap();
                 None
             }
@@ -97,19 +107,9 @@ async fn handle_incoming_tcp_connection(
 
             // And push the request and pending transaction to the lists.
             open_requests.push_back((song_id, from, amount));
-            pending_confirmations.push_back(Box::pin(async move {
-                let Some(receipt) = dbg!(client.send_raw_tx(tx_rlp.to_vec().into()).await)? else {
-                        bail!("Didn't receive a receipt")
-                    };
-                let Some(status) = &receipt.status else {
-                        bail!("EIP-658 not activated")
-                    };
-                if *status != U64::from(1) {
-                    bail!("Transaction-status == 0 --> failure")
-                };
-                tokio::time::sleep(Duration::from_secs(1)).await;
-
-                Ok(amount as i32)
+            pending_txs_stage_1.push_back(Box::pin(async move {
+                let pending_tx = dbg!(client.send_raw_tx(tx_rlp.freeze().into()).await)?;
+                Ok((pending_tx, amount))
             }));
         };
 

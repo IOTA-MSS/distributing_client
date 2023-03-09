@@ -10,8 +10,8 @@ extern crate tracing;
 
 mod account;
 mod distribute;
-mod library;
 mod download;
+mod library;
 mod songs;
 mod wallet;
 
@@ -48,9 +48,16 @@ async fn _main(config: Config) -> eyre::Result<()> {
             // tracing_subscriber::fmt::init();
             crate::distribute::run(config).await?;
         }
-        Command::Listen { port } => {
-            // tracing_subscriber::fmt::init();
-            crate::download::run(config, port).await?;
+        Command::DownloadLocal { distributor_port, song_id, index, chunks, file } => {
+            crate::download::run(
+                config,
+                distributor_port,
+                song_id,
+                index,
+                chunks,
+                file
+            )
+            .await?;
         }
 
         Command::Download { ids, distribute } => {
@@ -97,6 +104,4 @@ const TEST_NODE_URL: &'static str = "http://localhost:9090/chains/tst1pzt0gue3mh
 const TEST_CONTRACT_ADDRESS: &'static str = "0xAD3781Bd2FEC290b01c8C410eF6a7e8Baae632Db";
 const CHAIN_ID_IOTA: &'static str =
     "tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s";
-const CHAIN_ID_ETH: u16 = 1074;
-
-type Chunk = Vec<u8>;
+const TEST_CHAIN_ID_ETH: u16 = 1074;

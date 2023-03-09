@@ -14,6 +14,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn chain_id(&self) -> u16 {
+        self.file.chain_id
+    }
+
     pub fn from_args() -> eyre::Result<Self> {
         let args = Args::parse();
         let config = std::fs::read_to_string(&args.config_path)
@@ -56,7 +60,7 @@ impl Config {
                 (true, None) => Err(eyre!("Wallet is encrypted, please give a password.")),
                 (false, Some(_)) => Err(eyre!("Wallet is not encrypted, no password needed.")),
             }?;
-            Ok(Wallet::from_private_key(&key)?)
+            Ok(Wallet::from_private_key(&key, self.file.chain_id)?)
         } else {
             Err(eyre!("No wallet coupled."))
         }
@@ -69,6 +73,7 @@ pub struct ConfigFile {
     pub contract_address: String,
     pub node_url: String,
     pub database_path: String,
+    pub chain_id: u16
 }
 
 #[derive(clap::Parser, Debug, Clone)]
@@ -162,9 +167,26 @@ pub enum Command {
         song_ids: Vec<String>,
     },
 
-    Listen {
-        #[arg(long, short = 'P')]
-        port: u16,
+    DownloadLocal {
+        /// The local port of the distributor
+        #[arg(long, short)]
+        distributor_port: u16,
+
+        /// The id of the song to listen to
+        #[arg(long, short)]
+        song_id: String,
+
+        /// The index to start listening at
+        #[arg(long, short)]
+        index: usize,
+
+        /// The amount of chunks from index
+        #[arg(long, short = 'C')]
+        chunks: usize,
+
+        /// The file-name to output into
+        #[arg(long, short)]
+        file: String
     },
 
     CreateAccount {

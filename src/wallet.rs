@@ -2,7 +2,7 @@ use crate::library::{config::Config, crypto::Wallet, database::Database};
 use std::io::stdin;
 
 pub async fn generate(password: Option<String>, cfg: Config) -> eyre::Result<()> {
-    let key = Wallet::generate().private_key();
+    let key = Wallet::generate(cfg.chain_id()).private_key();
     let database = cfg.initialize_database().await?;
     set_key_with_confirmation(&database, key, password).await?;
 

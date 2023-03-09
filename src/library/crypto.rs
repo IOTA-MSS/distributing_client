@@ -6,8 +6,6 @@ use ethers::{
 use eyre::Context;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
-use crate::CHAIN_ID_ETH;
-
 /// A wrapper around the `LocalWallet`.
 #[derive(Clone, Debug)]
 pub struct Wallet {
@@ -16,17 +14,17 @@ pub struct Wallet {
 
 impl Wallet {
     /// Create the wallet from the hex-encoded secret key.
-    pub fn from_private_key(secret: &str) -> eyre::Result<Self> {
+    pub fn from_private_key(secret: &str, chain_id: u16) -> eyre::Result<Self> {
         let key = SecretKey::from_be_bytes(&hex::decode(secret)?)?;
         Ok(Self {
-            wallet: LocalWallet::from(key).with_chain_id(CHAIN_ID_ETH),
+            wallet: LocalWallet::from(key).with_chain_id(chain_id),
         })
     }
 
     /// Generate a new wallet with a random secret key.
-    pub fn generate() -> Self {
+    pub fn generate(chain_id: u16) -> Self {
         Self {
-            wallet: LocalWallet::new(&mut ThreadRng::default()).with_chain_id(CHAIN_ID_ETH),
+            wallet: LocalWallet::new(&mut ThreadRng::default()).with_chain_id(chain_id),
         }
     }
 
@@ -60,6 +58,8 @@ pub fn decrypt_private_key(encrypted_key: &str, password: &str) -> eyre::Result<
 
 #[cfg(test)]
 mod test {
+    use crate::TEST_CHAIN_ID_ETH;
+
     use super::*;
 
     #[test]
@@ -84,8 +84,8 @@ mod test {
 
     #[test]
     fn generating_and_importing() {
-        let wallet1 = Wallet::generate();
-        let wallet2 = Wallet::from_private_key(&wallet1.private_key()).unwrap();
+        let wallet1 = Wallet::generate(TEST_CHAIN_ID_ETH);
+        let wallet2 = Wallet::from_private_key(&wallet1.private_key(), TEST_CHAIN_ID_ETH).unwrap();
 
         assert_eq!(wallet1.address(), wallet2.address());
         assert_eq!(wallet1.private_key(), wallet2.private_key());

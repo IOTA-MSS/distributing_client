@@ -1,14 +1,13 @@
-use crate::CHAIN_ID_ETH;
-
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
+    receipt_ext::TransactionReceiptExt,
 };
 use ethers::{
     abi::AbiDecode,
     prelude::*,
     signers::LocalWallet,
-    types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt, U256},
+    types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt},
     utils::rlp::{Decodable, Rlp},
 };
 use ethers_providers::{Http, Middleware, Provider};
@@ -24,10 +23,6 @@ pub struct TangleTunesClient {
 }
 
 impl TangleTunesClient {
-    pub fn wallet(&self) -> &Wallet {
-        &self.wallet
-    }
-
     pub async fn initialize(
         wallet: Wallet,
         node_url: &str,
@@ -54,7 +49,7 @@ impl TangleTunesClient {
         Ok(contract)
     }
 
-    pub async fn create_get_chunks_signed_tx_rlp(
+    pub async fn get_chunks_rlp(
         &self,
         song_id: &str,
         from: usize,
@@ -86,18 +81,29 @@ impl TangleTunesClient {
         Ok(AbiDecode::decode(tx.data().unwrap())?)
     }
 
-    pub async fn send_raw_tx(&self, rlp: Bytes) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self
-            .abi_client
+    // pub fn inner(&self) -> Provider<Http> {
+    //     &self.abi_client
+    // }
+
+    pub async fn send_raw_tx<'a>(
+        &'a self,
+        rlp: Bytes,
+    ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
+        Ok(self.abi_client
             .deref()
-            .client()
+            .client_ref()
+            .inner()
+            .inner()
             .send_raw_transaction(rlp)
-            .await?
             .await?)
+        // .await?
+        // .unwrap();
+        // .status_is_ok()?; // FIXME
+        // Ok(receipt)
     }
 
-    pub async fn call_deposit(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self
+    pub async fn deposit(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
+        let receipt = self
             .abi_client
             .deposit()
             .value(amount)
@@ -105,44 +111,66 @@ impl TangleTunesClient {
             .legacy()
             .send()
             .await?
-            .await?)
+            .await?
+            .unwrap()
+            .status_is_ok()?;
+        Ok(receipt)
     }
 
-    pub async fn call_withdraw(&self, amount: u64) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self
+    pub async fn register(&self) -> eyre::Result<TransactionReceipt> {
+        // self.abi_client.
+
+        todo!()
+    }
+
+    pub async fn withdraw(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
+        let receipt = self
             .abi_client
             .withdraw(amount.into())
             .gas(100_000)
             .legacy()
             .send()
             .await?
-            .await?)
+            .await?
+            .unwrap()
+            .status_is_ok()?;
+        Ok(receipt)
     }
 
-    pub async fn call_delete_user(&self) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self
+    pub async fn delete_user(&self) -> eyre::Result<TransactionReceipt> {
+        let receipt = self
             .abi_client
             .delete_user()
             .legacy()
             .gas(100_000)
             .send()
             .await?
-            .await?)
+            .await?
+            .unwrap()
+            .status_is_ok()?;
+        Ok(receipt)
     }
 
-    pub async fn call_create_user(
+    pub async fn create_user(
         &self,
         name: String,
         description: String,
-    ) -> eyre::Result<Option<TransactionReceipt>> {
-        Ok(self
+    ) -> eyre::Result<TransactionReceipt> {
+        let receipt = self
             .abi_client
             .create_user(name, description)
             .legacy()
             .gas(100_000)
             .send()
             .await?
-            .await?)
+            .await?
+            .unwrap();
+
+        if receipt.status.unwrap() != 1.into() {
+            bail!("Transaction status 0: {receipt:?}")
+        }
+
+        Ok(receipt)
     }
 
     pub(crate) fn address(&self) -> Address {
@@ -155,11 +183,11 @@ mod test {
     use ethers::abi::{AbiEncode, Address};
     use hex::FromHex;
 
-    use crate::{library::crypto::Wallet, TEST_SONG_HEX_ID, TEST_SONG_ID_SLICE};
+    use crate::{library::crypto::Wallet, TEST_CHAIN_ID_ETH, TEST_SONG_HEX_ID, TEST_SONG_ID_SLICE};
 
     #[tokio::test]
     async fn deposit_money_to_wallet() {
-        let wallet = Wallet::generate();
+        let wallet = Wallet::generate(TEST_CHAIN_ID_ETH);
 
         // let client = TangleTunesClient::initialize(&wallet, TEST_NODE_URL, TEST_CONTRACT_ADDRESS)
         //     .await
