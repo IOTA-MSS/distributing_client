@@ -45,15 +45,6 @@ impl Decoder for RequestChunksDecoder {
     }
 }
 
-#[test]
-fn test() {
-    println!(
-        "132 = {:?} = {}",
-        132u32.to_le_bytes(),
-        u32::from_le_bytes(132u32.to_le_bytes())
-    );
-}
-
 pub struct RequestChunksEncoder;
 
 impl Encoder<&Bytes> for RequestChunksEncoder {
