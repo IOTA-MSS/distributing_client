@@ -2,7 +2,6 @@ use crate::library::client::TangleTunesClient;
 use crate::library::crypto::{self, Wallet};
 use crate::library::database::Database;
 use eyre::Context;
-use futures::executor::block_on;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -15,7 +14,7 @@ pub struct App {
     pub node_url: String,
     pub database_path: PathBuf,
     pub chain_id: u16,
-    pub database: Option<&'static Database>,
+    pub database: Database,
 }
 
 impl App {
@@ -39,7 +38,7 @@ impl App {
         &self.database_path
     }
 
-    pub fn from_config_file(config_path: String, password: Option<String>) -> eyre::Result<Self> {
+    pub async fn from_config_file(config_path: String, password: Option<String>) -> eyre::Result<Self> {
         let file = std::fs::read_to_string(&config_path)
             .wrap_err(format!("Config does not exist at path {:?}", config_path))?;
         let cfg_file = toml::from_str::<ConfigFile>(&file).wrap_err(format!(
@@ -59,20 +58,21 @@ impl App {
             port: cfg_file.port,
             contract_address: cfg_file.contract_address,
             node_url: cfg_file.node_url,
+            database: Database::initialize(&database_path).await?,
             database_path,
             chain_id: cfg_file.chain_id,
-            database: None,
         };
 
         Ok(cfg)
     }
 
     pub fn database(&self) -> eyre::Result<Database> {
-        if let Some(database) = self.database {
-            Ok(*database)
-        } else {
-            block_on(Database::initialize(self.database_path()))
-        }
+        Ok(self.database)
+        // if let Some(database) = self.database {
+        //     Ok(*database)
+        // } else {
+        //     block_on()
+        // }
     }
 
     pub async fn initialize_client(

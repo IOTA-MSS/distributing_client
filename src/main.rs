@@ -20,7 +20,7 @@ fn main() -> eyre::Result<()> {
     Runtime::new().unwrap().block_on(async move {
         color_eyre::install().unwrap();
         let args = Args::parse();
-        let app = App::from_config_file(args.config, args.password)?;
+        let app = App::from_config_file(args.config, args.password).await?;
         _main(app, args.command).await
     })
 }
@@ -122,7 +122,7 @@ pub mod test {
             node_url: NODE_URL.to_string(),
             database_path: PathBuf::from("test/database"),
             chain_id: CHAIN_ID,
-            database: None,
+            database: todo!(),
         }
     }
 }
