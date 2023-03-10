@@ -95,7 +95,7 @@ impl App {
             }?;
             Ok(Wallet::from_private_key(&key, self.chain_id())?)
         } else {
-            Err(eyre!("No wallet coupled."))
+            Err(eyre!("No private key found. Import or generate one!"))
         }
     }
 }
