@@ -173,8 +173,12 @@ impl TangleTunesClient {
         Ok(receipt)
     }
 
-    pub(crate) fn address(&self) -> Address {
+    pub(crate) fn client_address(&self) -> Address {
         self.abi_client.address()
+    }
+
+    pub(crate) fn wallet_address(&self) -> Address {
+        self.abi_client.client_ref().signer().address()
     }
 }
 

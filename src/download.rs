@@ -28,7 +28,7 @@ pub async fn run(
 
     let database = cfg.database()?;
     let client = cfg.initialize_client(&database).await?;
-    let distributor_address = client.address();
+    let distributor_address = client.wallet_address();
 
     let mut song_buffer = vec![None; chunk_amount];
 

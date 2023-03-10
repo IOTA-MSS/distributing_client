@@ -90,11 +90,11 @@ async fn handle_incoming_tcp_connection(
             // Decode the parameters we care about
             let (song_id, from, amount) = {
                 let decoded_call = client.decode_get_chunks_tx_rlp(&tx_rlp)?;
-                if decoded_call.distributor != client.address() {
+                if decoded_call.distributor != client.wallet_address() {
                     bail!(
                         "Distributor address is not my address!: {}, {}",
                         decoded_call.distributor,
-                        client.address()
+                        client.wallet_address()
                     )
                 }
                 (

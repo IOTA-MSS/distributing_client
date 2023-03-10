@@ -21,24 +21,37 @@ impl Decoder for RequestChunksDecoder {
     type Error = eyre::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        println!("Decoding message... {:?} ", &src as &[u8]);
         if self.body_len.is_none() {
             if src.len() < 4 {
                 return Ok(None);
             }
-            self.body_len = Some(u32::from_le_bytes(
-                src.split_to(4).as_ref().try_into().unwrap(),
-            ));
+            let bytes = src.split_to(4).as_ref().try_into().unwrap();
+            println!("First four bytes: {bytes:?}");
+            self.body_len = Some(u32::from_le_bytes(bytes));
+            println!("Body length decoded. It is is: {}", self.body_len.unwrap());
         }
 
         let body_len = self.body_len.unwrap() as usize;
         if src.len() < body_len {
+            println!("Error: Body was smaller than the length {body_len} decoded");
             return Ok(None);
         }
 
         let rlp = src.split_to(body_len);
+        println!("Decoding was succesful: tx_rlp data is: {rlp:?}");
         let _body_len = self.body_len.take().unwrap();
         Ok(Some(rlp))
     }
+}
+
+#[test]
+fn test() {
+    println!(
+        "132 = {:?} = {}",
+        132u32.to_le_bytes(),
+        u32::from_le_bytes(132u32.to_le_bytes())
+    );
 }
 
 pub struct RequestChunksEncoder;

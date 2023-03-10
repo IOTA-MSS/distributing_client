@@ -1,5 +1,5 @@
 port = 3000
 contract_address = "0x098649d462f2361E9DA489aAB9390527eB04594e"
-node_url = 	"http://localhost:9090/chains/tst1pr26sa59a6nx4n5nkr78yweyzs8ht3lh70057lmfk25rzuwtchugc8a0vh2/evm"
+node_url = 	"http://localhost:9090/chains/tst1ppm9uwa2ykzx3wmjg26c2e6mcqxwsqrdf6g802jayy0c5q5ughrm5m65uvg/evm"
 database_path = "./database"
 chain_id = 1074
