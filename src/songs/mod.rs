@@ -4,7 +4,7 @@ use std::path::PathBuf;
 pub use download::download;
 
 use crate::{
-    lib::app::App,
+    library::app::App,
     util::{try_from_hex_prefix, SongId},
 };
 

@@ -1,5 +1,5 @@
 use crate::{
-    lib::{
+    library::{
         app::App,
         client::TangleTunesClient,
         database::Database,

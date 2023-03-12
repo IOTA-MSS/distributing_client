@@ -1,4 +1,4 @@
-use crate::lib::app::App;
+use crate::library::app::App;
 
 pub async fn create(name: String, description: Option<String>, cfg: App) -> eyre::Result<()> {
     let client = cfg.initialize_client(&cfg.database).await?;

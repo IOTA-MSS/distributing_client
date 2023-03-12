@@ -1,4 +1,4 @@
-use crate::lib::{app::App, crypto::Wallet, database::Database};
+use crate::library::{app::App, crypto::Wallet, database::Database};
 use std::io::stdin;
 
 pub async fn generate(password: Option<String>, cfg: App) -> eyre::Result<()> {

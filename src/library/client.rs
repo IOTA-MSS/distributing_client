@@ -228,7 +228,7 @@ mod test {
     use ethers::abi::Address;
     // use hex::FromHex;
 
-    use crate::{lib::crypto::Wallet, test, util::to_hex_prefix};
+    use crate::{library::crypto::Wallet, test, util::to_hex_prefix};
 
     #[tokio::test]
     async fn deposit_money_to_wallet() {

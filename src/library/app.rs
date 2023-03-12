@@ -1,4 +1,4 @@
-use crate::lib::{
+use crate::library::{
     client::TangleTunesClient,
     crypto::{self, Wallet},
     database::Database,

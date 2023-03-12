@@ -1,5 +1,5 @@
 use crate::{
-    lib::{
+    library::{
         app::App,
         protocol::{RequestChunksEncoder, SendChunksDecoder},
     },

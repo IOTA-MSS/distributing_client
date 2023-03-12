@@ -20,11 +20,15 @@ pub struct Args {
 
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum Command {
-    /// Commands for managing your coupled IOTA wallet.
+    /// Manage your IOTA wallet
     #[command(subcommand)]
     Wallet(WalletCommand),
 
-    /// Commands for managing songs.
+    /// Manage your TangleTunes account
+    #[command(subcommand)]
+    Account(AccountCommand),
+
+    /// Manage your songs
     #[command(subcommand)]
     Songs(SongsCommand),
 

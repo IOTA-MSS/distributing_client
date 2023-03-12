@@ -1,6 +1,6 @@
-use args::{Args, Command, SongsCommand, WalletCommand};
+use args::{AccountCommand, Args, Command, SongsCommand, WalletCommand};
 use clap::Parser;
-use lib::{app::App, crypto};
+use library::{app::App, crypto};
 use tokio::runtime::Runtime;
 #[macro_use]
 extern crate eyre;
@@ -10,7 +10,7 @@ extern crate tracing;
 mod account;
 mod args;
 mod distribute;
-mod lib;
+mod library;
 mod songs;
 mod wallet;
 
@@ -65,6 +65,14 @@ async fn _main(app: App, command: Command) -> eyre::Result<()> {
             }
             SongsCommand::SetFee { ids, fee } => crate::songs::set_fee(ids, fee, app).await,
             SongsCommand::List => crate::songs::list(app).await,
+        },
+        Command::Account(command) => match command {
+            AccountCommand::Deposit { amount } => crate::account::deposit(amount, app).await,
+            AccountCommand::Withdraw { amount } => crate::account::withdraw(amount, app).await,
+            AccountCommand::Create { name, description } => {
+                crate::account::create(name, description, app).await
+            }
+            AccountCommand::Delete => crate::account::delete(app).await,
         },
         Command::Distribute => crate::distribute::run(app).await,
     }
@@ -160,7 +168,7 @@ pub mod util {
 
 #[cfg(test)]
 pub mod test {
-    use crate::lib::app::App;
+    use crate::library::app::App;
     use std::path::PathBuf;
 
     pub const UNVALIDATED_SONG_HEX_ID: &str =
