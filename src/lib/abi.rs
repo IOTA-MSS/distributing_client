@@ -514,7 +514,7 @@ pub mod tangle_tunes_abi {
     )]
     #[ethcall(name = "get_chunks", abi = "get_chunks(bytes32,uint256,uint256,address)")]
     pub struct GetChunksCall {
-        pub song: [u8; 32],
+        pub song_id: [u8; 32],
         pub index: ::ethers::core::types::U256,
         pub amount: ::ethers::core::types::U256,
         pub distributor: ::ethers::core::types::Address,

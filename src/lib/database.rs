@@ -1,3 +1,4 @@
+use crate::util::SongId;
 use crate::BYTES_PER_CHUNK;
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
@@ -43,7 +44,7 @@ impl Database {
         sqlx::query(
             "
             CREATE TABLE IF NOT EXISTS songs (
-                id TEXT NOT NULL UNIQUE,
+                id BLOB NOT NULL UNIQUE,
                 distributing BOOL NOT NULL,
                 data BLOB NOT NULL
             );
@@ -90,14 +91,14 @@ impl Database {
         Ok(row)
     }
 
-    pub async fn set_distribution(&self, song_id: &str, distribute: bool) -> eyre::Result<()> {
+    pub async fn set_distribution(&self, song_id: &SongId, distribute: bool) -> eyre::Result<()> {
         sqlx::query(
             "
             UPDATE songs SET distributing = ?1 WHERE id = $2;
             ",
         )
         .bind(distribute)
-        .bind(song_id)
+        .bind(song_id.as_slice())
         .execute(&mut self.acquire().await?)
         .await?;
 
@@ -107,7 +108,7 @@ impl Database {
     /// Add a song to the database
     pub async fn add_song(
         &self,
-        id: &str,
+        id: &SongId,
         distributing: bool,
         song_data: &[u8],
     ) -> eyre::Result<()> {
@@ -116,7 +117,7 @@ impl Database {
             INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
             ",
         )
-        .bind(id)
+        .bind(id.as_slice())
         .bind(distributing)
         .bind(song_data)
         .execute(&mut self.acquire().await?)
@@ -125,13 +126,28 @@ impl Database {
         Ok(())
     }
 
-    pub async fn remove_song(&self, id: &str) -> eyre::Result<bool> {
+    pub async fn get_songs_metadata(&self) -> eyre::Result<Vec<(SongId, bool)>> {
+        let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
+            "
+            SELECT id, distributing FROM songs
+            ",
+        )
+        .fetch_all(&mut self.acquire().await?)
+        .await?
+        .into_iter()
+        .map(|(id, bool)| (id.try_into().unwrap(), bool))
+        .collect();
+
+        Ok(row)
+    }
+
+    pub async fn remove_song(&self, id: &SongId) -> eyre::Result<bool> {
         let res = sqlx::query(
             "
             DELETE FROM songs WHERE id = ?1;
             ",
         )
-        .bind(id)
+        .bind(id.as_slice())
         .execute(&mut self.acquire().await?)
         .await?;
 
@@ -145,7 +161,7 @@ impl Database {
     /// Get the chunks from (chunk_start, chunk_start + chunks) if they exist.
     pub async fn get_chunks(
         &self,
-        id: &str,
+        id: &SongId,
         chunk_start: u32,
         chunks: u32,
     ) -> eyre::Result<(Vec<u8>, bool)> {
@@ -154,13 +170,12 @@ impl Database {
 
         let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
             "
-            SELECT substr(data, ?1, ?2), distributing
-            FROM songs WHERE id = ?3
+            SELECT substr(data, ?1, ?2), distributing FROM songs WHERE id = ?3
             ",
         )
         .bind(byte_start)
         .bind(bytes)
-        .bind(id)
+        .bind(id.as_slice())
         .fetch_one(&mut self.acquire().await?)
         .await?;
 
@@ -170,7 +185,10 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::test;
+    use crate::{
+        test,
+        util::{to_hex_prefix, try_from_hex_prefix},
+    };
 
     use super::*;
 
@@ -198,26 +216,28 @@ mod test {
 
     #[tokio::test]
     async fn chunking_is_correct() -> eyre::Result<()> {
+        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+
         let db = Database::initialize_in_memory().await?;
         let song_data = std::fs::read(
-            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+            "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, true, &song_data).await?;
 
-        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 0, 50).await?;
+        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 0, 50).await?;
         assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
 
-        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 0, 80).await?;
+        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 0, 80).await?;
         assert_eq!(chunks.len(), 2113939);
         assert!(chunks.len() < 80 * BYTES_PER_CHUNK as usize);
 
-        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 10, 20).await?;
+        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 10, 20).await?;
         assert_eq!(
             chunks,
             song_data[10 * BYTES_PER_CHUNK as usize..30 * BYTES_PER_CHUNK as usize]
         );
 
-        let (chunks, _) = db.get_chunks(test::SONG_HEX_ID, 30, 50).await?;
+        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 30, 50).await?;
         assert_eq!(
             chunks[0..20 * BYTES_PER_CHUNK as usize],
             song_data[30 * BYTES_PER_CHUNK as usize..50 * BYTES_PER_CHUNK as usize]
@@ -229,20 +249,49 @@ mod test {
 
     #[tokio::test]
     async fn add_remove_song() -> eyre::Result<()> {
+        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.remove_song(test::SONG_HEX_ID).await?, false);
+        assert_eq!(db.remove_song(&unvalidated_song_id).await?, false);
 
         let song_data = std::fs::read(
-            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+            "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
-        let (db_data, distribute) = db.get_chunks(test::SONG_HEX_ID, 0, 100).await?;
+        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        let (db_data, distribute) = db.get_chunks(&unvalidated_song_id, 0, 100).await?;
         assert!(distribute);
         assert_eq!(song_data, db_data);
 
-        assert_eq!(db.remove_song(test::SONG_HEX_ID).await?, true);
-        assert!(db.get_chunks(test::SONG_HEX_ID, 0, 100).await.is_err());
+        assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
+        assert!(db.get_chunks(&unvalidated_song_id, 0, 100).await.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn song_metadata() -> eyre::Result<()> {
+        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+        let db = Database::initialize_in_memory().await?;
+
+        assert_eq!(db.get_songs_metadata().await?.len(), 0);
+
+        let song_data = std::fs::read(
+            "mp3/0x51dba6a00c006f51b012f6e6c1516675ee4146e03628e3567980ed1c354441f2.mp3",
+        )?;
+        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+
+        assert_eq!(db.get_songs_metadata().await?.len(), 1);
+
+        let song_data = std::fs::read(
+            "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
+        )?;
+        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+
+        assert_eq!(db.get_songs_metadata().await?.len(), 2);
+
+        assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
+
+        assert_eq!(db.get_songs_metadata().await?.len(), 1);
 
         Ok(())
     }
@@ -262,17 +311,18 @@ mod test {
 
     #[tokio::test]
     async fn set_distribution() -> eyre::Result<()> {
+        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
         let song_data = std::fs::read(
-            "./test/mp3/0800000722040506080000072204050608000007220405060800000722040506.mp3",
+            "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(test::SONG_HEX_ID, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, true, &song_data).await?;
 
-        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, true);
-        db.set_distribution(test::SONG_HEX_ID, false).await?;
-        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, false);
-        db.set_distribution(test::SONG_HEX_ID, true).await?;
-        assert_eq!(db.get_chunks(test::SONG_HEX_ID, 0, 0).await?.1, true);
+        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, true);
+        db.set_distribution(&unvalidated_song_id, false).await?;
+        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, false);
+        db.set_distribution(&unvalidated_song_id, true).await?;
+        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, true);
 
         Ok(())
     }

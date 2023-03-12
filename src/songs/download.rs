@@ -1,8 +1,9 @@
 use crate::{
-    library::{
+    lib::{
         app::App,
         protocol::{RequestChunksEncoder, SendChunksDecoder},
     },
+    util::SongId,
     BYTES_PER_CHUNK_USIZE,
 };
 use ethers_providers::StreamExt;
@@ -13,21 +14,23 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 
 const CHUNKS_PER_REQUEST: usize = 5;
 
-pub async fn run(
+pub async fn download(
     cfg: App,
-    port: u16,
+    ip_address: String,
     song_id: String,
-    chunk_index: usize,
-    chunk_amount: usize,
-    file: String,
+    to_file: Option<(String, usize, usize)>,
 ) -> eyre::Result<()> {
-    let mut stream = TcpStream::connect(("127.0.0.1", port)).await?;
+    let Some((file, chunk_index, chunk_amount)) = to_file else {
+        bail!("Downloading to database not yet implemented. Specify `--to_file <FILE>`")
+    };
+
+    let song_id = SongId::try_from_hex(&song_id)?;
+    let mut stream = TcpStream::connect(ip_address).await?;
     let (read_stream, write_stream) = stream.split();
     let mut read_stream = FramedRead::new(read_stream, SendChunksDecoder::new());
     let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
 
-    let database = cfg.database()?;
-    let client = cfg.initialize_client(&database).await?;
+    let client = cfg.initialize_client(&cfg.database).await?;
     let distributor_address = client.wallet_address();
 
     let mut song_buffer = vec![None; chunk_amount];
@@ -40,7 +43,7 @@ pub async fn run(
 
         let tx_rlp = client
             .get_chunks_rlp(
-                &song_id,
+                song_id.clone(),
                 this_chunk_index,
                 request_size,
                 distributor_address,

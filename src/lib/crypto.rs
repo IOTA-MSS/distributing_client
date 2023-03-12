@@ -6,6 +6,8 @@ use ethers::{
 use eyre::Context;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
+use crate::util::{try_from_hex_prefix, to_hex_prefix};
+
 /// A wrapper around the `LocalWallet`.
 #[derive(Clone, Debug)]
 pub struct Wallet {
@@ -15,7 +17,7 @@ pub struct Wallet {
 impl Wallet {
     /// Create the wallet from the hex-encoded secret key.
     pub fn from_private_key(secret: &str, chain_id: u16) -> eyre::Result<Self> {
-        let key = SecretKey::from_be_bytes(&hex::decode(secret)?)?;
+        let key = SecretKey::from_be_bytes(&try_from_hex_prefix::<Vec<u8>>(secret)?)?;
         Ok(Self {
             wallet: LocalWallet::from(key).with_chain_id(chain_id),
         })
@@ -35,7 +37,7 @@ impl Wallet {
 
     /// Get the hex-encoded private key of this wallet.
     pub fn private_key(&self) -> String {
-        hex::encode(self.wallet.signer().to_bytes())
+        to_hex_prefix(self.wallet.signer().to_bytes())
     }
 
     /// Get the address of this wallet.

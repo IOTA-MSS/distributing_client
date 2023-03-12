@@ -1,18 +1,24 @@
+use crate::util::SongId;
+
 use super::{
-    abi::{GetChunksCall, TangleTunesAbi},
+    abi::{DepositCall, GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
     receipt_ext::TransactionReceiptExt,
 };
 use ethers::{
-    abi::AbiDecode,
+    abi::{AbiDecode, AbiEncode},
     prelude::*,
     signers::LocalWallet,
     types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt},
     utils::rlp::{Decodable, Rlp},
 };
 use ethers_providers::{Http, Middleware, Provider};
-use hex::FromHex;
 use std::{ops::Deref, str::FromStr, sync::Arc};
+
+type PendingTangleTunesTransaction<'a> = PendingTransaction<'a, Http>;
+
+pub type TangleTunesCall<T> =
+    ContractCall<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>, T>;
 
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
@@ -23,6 +29,17 @@ pub struct TangleTunesClient {
 }
 
 impl TangleTunesClient {
+    pub async fn get_receipt(&self, hash: impl Into<TxHash>) -> eyre::Result<TransactionReceipt> {
+        match self
+            .abi_client
+            .client_ref()
+            .get_transaction_receipt(hash.into())
+            .await
+        {
+            Ok(receipt) => receipt.ok_or(eyre!("No transaction receipt")),
+            Err(e) => Err(e.into()),
+        }
+    }
     pub async fn initialize(
         wallet: Wallet,
         node_url: &str,
@@ -51,21 +68,17 @@ impl TangleTunesClient {
 
     pub async fn get_chunks_rlp(
         &self,
-        song_id: &str,
+        song_id: SongId,
         from: usize,
         amount: usize,
         distributor: Address,
     ) -> eyre::Result<Bytes> {
         let mut tx = self
             .abi_client
-            .get_chunks(
-                FromHex::from_hex(song_id)?,
-                from.into(),
-                amount.into(),
-                distributor,
-            )
+            .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
             .legacy()
             .gas(100_000)
+            .gas_price(1)
             .tx;
 
         tx.set_nonce(self.abi_client.client_ref().inner().next());
@@ -81,25 +94,18 @@ impl TangleTunesClient {
         Ok(AbiDecode::decode(tx.data().unwrap())?)
     }
 
-    // pub fn inner(&self) -> Provider<Http> {
-    //     &self.abi_client
-    // }
-
     pub async fn send_raw_tx<'a>(
         &'a self,
         rlp: Bytes,
     ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
-        Ok(self.abi_client
+        Ok(self
+            .abi_client
             .deref()
             .client_ref()
             .inner()
             .inner()
             .send_raw_transaction(rlp)
             .await?)
-        // .await?
-        // .unwrap();
-        // .status_is_ok()?; // FIXME
-        // Ok(receipt)
     }
 
     pub async fn deposit(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
@@ -108,6 +114,7 @@ impl TangleTunesClient {
             .deposit()
             .value(amount)
             .gas(100_000)
+            .gas_price(1)
             .legacy()
             .send()
             .await?
@@ -117,10 +124,41 @@ impl TangleTunesClient {
         Ok(receipt)
     }
 
-    pub async fn register(&self) -> eyre::Result<TransactionReceipt> {
-        // self.abi_client.
+    pub fn distribute2(&self, song_id: SongId, fee: u32) -> eyre::Result<TangleTunesCall<()>> {
+        Ok(self
+            .abi_client
+            .distribute(song_id.into(), fee.into())
+            .gas(100_000)
+            .gas_price(1)
+            .legacy())
+    }
 
-        todo!()
+    pub async fn distribute(
+        &self,
+        song_id: SongId,
+        fee: u32,
+    ) -> eyre::Result<TransactionReceipt> {
+        let receipt = self
+            .abi_client
+            .distribute(song_id.into(), fee.into())
+            .gas(100_000)
+            .gas_price(1)
+            .legacy()
+            .send()
+            .await?
+            .await?
+            .unwrap()
+            .status_is_ok()?;
+        Ok(receipt)
+    }
+
+    pub fn undistribute(&self, song_id: SongId) -> eyre::Result<TangleTunesCall<()>> {
+        Ok(self
+            .abi_client
+            .undistribute(song_id.into())
+            .gas(100_000)
+            .gas_price(1)
+            .legacy())
     }
 
     pub async fn withdraw(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
@@ -128,6 +166,7 @@ impl TangleTunesClient {
             .abi_client
             .withdraw(amount.into())
             .gas(100_000)
+            .gas_price(1)
             .legacy()
             .send()
             .await?
@@ -143,6 +182,7 @@ impl TangleTunesClient {
             .delete_user()
             .legacy()
             .gas(100_000)
+            .gas_price(1)
             .send()
             .await?
             .await?
@@ -161,6 +201,7 @@ impl TangleTunesClient {
             .create_user(name, description)
             .legacy()
             .gas(100_000)
+            .gas_price(1)
             .send()
             .await?
             .await?
@@ -184,10 +225,10 @@ impl TangleTunesClient {
 
 #[cfg(test)]
 mod test {
-    use ethers::abi::{AbiEncode, Address};
-    use hex::FromHex;
+    use ethers::abi::Address;
+    // use hex::FromHex;
 
-    use crate::{library::crypto::Wallet, test};
+    use crate::{lib::crypto::Wallet, test, util::to_hex_prefix};
 
     #[tokio::test]
     async fn deposit_money_to_wallet() {
@@ -207,14 +248,7 @@ mod test {
         // client.call_users(address).await.unwrap();
     }
 
-    #[test]
-    fn hex_encode() {
-        use hex::ToHex;
-        let hex_id = ToHex::encode_hex::<String>(&test::SONG_ID);
-        assert_eq!(&hex_id, test::SONG_HEX_ID);
-        let new_song_id: Vec<u8> = FromHex::from_hex(&hex_id).unwrap();
-        assert_eq!(&test::SONG_ID, new_song_id.as_slice());
-    }
+
 
     #[tokio::test]
     async fn test() {
@@ -237,7 +271,7 @@ mod test {
         tokio::process::Command::new("wasp-cli")
             .arg("chain")
             .arg("deposit")
-            .arg(address.encode_hex())
+            .arg(to_hex_prefix(address.as_bytes()))
             .arg("--chain=testchain")
             .arg("base")
             .arg(":")

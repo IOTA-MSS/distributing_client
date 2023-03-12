@@ -1,41 +1,85 @@
-use crate::library::{
-    client::TangleTunesClient,
-    app::App,
-    database::Database,
-    protocol::{RequestChunksDecoder, SendChunksEncoder},
+use crate::{
+    lib::{
+        app::App,
+        client::TangleTunesClient,
+        database::Database,
+        protocol::{RequestChunksDecoder, SendChunksEncoder},
+    },
+    util::SongId,
 };
-use ethers_providers::{StreamExt, PendingTransaction, Http};
+use ethers_providers::{Http, PendingTransaction, StreamExt};
+use eyre::Context;
 use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
-use std::{collections::VecDeque, net::SocketAddr,};
-use tokio::net::{TcpListener, TcpStream};
+use std::{collections::VecDeque, net::SocketAddr, sync::Mutex};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::oneshot,
+};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
-pub async fn run(cfg: App) -> eyre::Result<()> {
-    let database = cfg.database()?;
-    let client = cfg.initialize_client(&database).await?;
+static EXIT_SIGNAL: Mutex<Option<oneshot::Sender<()>>> = Mutex::new(None);
 
-    let listener = TcpListener::bind(("127.0.0.1", cfg.port()))
-        .await
-        .unwrap();
+pub async fn run(app: App) -> eyre::Result<()> {
+    // Initialize our client and tcp-server
+    let client = app.initialize_client(&app.database).await?;
+    let listener = TcpListener::bind(("127.0.0.1", app.port())).await?;
 
-    while let Ok((mut stream, addr)) = listener.accept().await {
-        let _ = tokio::task::spawn(async move {
-            if let Err(e) =
-                dbg!(handle_incoming_tcp_connection(&mut stream, addr, database, client).await)
-            {
-                warn!("Handler exited with an error: {:?}", e);
+    // Start our exit handler which will message our main thread upon exit-signal
+    let mut exit_signal = {
+        let (tx, rx) = oneshot::channel();
+        *EXIT_SIGNAL.lock().unwrap() = Some(tx);
+        ctrlc::set_handler(|| {
+            let _ = EXIT_SIGNAL.lock().unwrap().take().unwrap().send(());
+        })?;
+        rx
+    };
+
+    // And register for distribution of all songs
+    let registered_songs = register_for_songs(&app, client).await?;
+
+    // Now we can run the actual server that accepts connections
+    let result = async {
+        loop {
+            // Concurrently do:
+            tokio::select! {
+                biased;
+
+                // If we receive an exit signal, we can break immeadeately
+                _ = (&mut exit_signal) => {
+                    break Ok::<_, eyre::Report>(())
+                }
+
+                // If there is an incoming tcp-connection, handle it appropriately
+                connection = listener.accept() => {
+                    let (mut stream, addr) = connection?;
+                    tokio::task::spawn(async move {
+                        if let Err(e) =
+                            dbg!(handle_new_listener(&mut stream, addr, client, app.database).await)
+                        {
+                            warn!("Handler exited with an error: {:?}", e);
+                        }
+                    });
+                }
             }
-        });
+        }
     }
+    .await;
 
-    Ok(())
+    // Now clean up and deregister for the songs
+    let deregister_result = deregister_for_songs(registered_songs, client).await;
+
+    if let Err(e) = deregister_result {
+        result.wrap_err(e)
+    } else {
+        result
+    }
 }
 
-async fn handle_incoming_tcp_connection(
+async fn handle_new_listener(
     stream: &mut TcpStream,
     _addr: SocketAddr,
-    database: Database,
     client: &'static TangleTunesClient,
+    database: Database,
 ) -> eyre::Result<()> {
     static DEBT_LIMIT: u32 = 3;
     let (read_stream, write_stream) = stream.split();
@@ -45,7 +89,8 @@ async fn handle_incoming_tcp_connection(
     // The amount of credit available for this client.
     let mut credit: i32 = DEBT_LIMIT as i32;
     // The requests from this client that haven't beel fulfilled yet.
-    let mut open_requests: VecDeque<(String, i32, i32)> = VecDeque::new();
+    let mut open_requests: VecDeque<(SongId, i32, i32)> = VecDeque::new();
+
     // The transactions that will resolve with the amount of credit gained from them.
     let mut pending_txs_stage_1 =
         VecDeque::<BoxFuture<'static, eyre::Result<(PendingTransaction<Http>, i32)>>>::new();
@@ -98,7 +143,7 @@ async fn handle_incoming_tcp_connection(
                     )
                 }
                 (
-                    hex::encode(decoded_call.song),
+                    decoded_call.song_id.into(),
                     decoded_call.index.as_u128().try_into()?,
                     decoded_call.amount.as_u128().try_into()?,
                 )
@@ -146,4 +191,58 @@ async fn handle_incoming_tcp_connection(
                 .await?;
         }
     }
+}
+
+pub async fn register_for_songs(
+    app: &App,
+    client: &'static TangleTunesClient,
+) -> eyre::Result<Vec<SongId>> {
+    let mut tx_hashes = FuturesUnordered::new();
+    for (song_id, distributing) in app.database.get_songs_metadata().await? {
+        let _result = {
+            if distributing {
+                println!("Registering song {song_id} on the smart-contract..");
+                let tx_hash = *client.distribute2(song_id.clone(), app.fee)?.send().await?;
+                tx_hashes.push(async move { (client.get_receipt(tx_hash).await, song_id) })
+            }
+            Ok::<_, eyre::Report>(())
+        };
+    }
+    let mut registered_songs = Vec::new();
+    while let Some((receipt, song_id)) = tx_hashes.next().await {
+        if let Ok(receipt) = receipt {
+            if receipt.status.unwrap() == 1.into() {
+                println!("Succesfully registered song {song_id}!");
+                registered_songs.push(song_id);
+                continue;
+            }
+        }
+        println!("ERROR: Could not register song {song_id}")
+    }
+    Ok(registered_songs)
+}
+
+pub async fn deregister_for_songs(
+    registered_songs: Vec<SongId>,
+    client: &'static TangleTunesClient,
+) -> eyre::Result<()> {
+    let mut tx_hashes = FuturesUnordered::new();
+    for song_id in registered_songs {
+        let _result = {
+            println!("Deregistering song {song_id} on the smart-contract..");
+            let tx_hash = *client.undistribute(song_id.clone())?.send().await?;
+            tx_hashes.push(async move { (client.get_receipt(tx_hash).await, song_id) });
+            Ok::<_, eyre::Report>(())
+        };
+    }
+    while let Some((receipt, song_id)) = tx_hashes.next().await {
+        if let Ok(receipt) = receipt {
+            if receipt.status.unwrap() == 1.into() {
+                println!("Succesfully deregistered song {song_id}!");
+                continue;
+            }
+        }
+        println!("ERROR: Could not deregister song {song_id}");
+    }
+    Ok(())
 }
