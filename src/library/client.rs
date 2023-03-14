@@ -16,8 +16,8 @@ use ethers_core::k256::ecdsa::SigningKey;
 use ethers_providers::{Http, Middleware, Provider};
 use std::{ops::Deref, str::FromStr, sync::Arc};
 
-pub type TangleTunesCall<T> =
-    ContractCall<NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>, T>;
+pub type TTMiddleWare = NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>;
+pub type TTCall<T> = ContractCall<TTMiddleWare, T>;
 
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl TangleTunesClient {
         Ok(contract)
     }
 
-    pub fn distribute(&self, song_id: SongId, fee: u32) -> TangleTunesCall<()> {
+    pub fn distribute(&self, song_id: SongId, fee: u32) -> TTCall<()> {
         self.abi_client
             .distribute(song_id.into(), fee.into())
             .gas(1_000_000)
@@ -70,7 +70,7 @@ impl TangleTunesClient {
             .legacy()
     }
 
-    pub fn edit_server_info(&self, address: String) -> TangleTunesCall<()> {
+    pub fn edit_server_info(&self, address: String) -> TTCall<()> {
         println!("EDIT_SERVER_INFO: {address}");
         self.abi_client
             .edit_server_info(address)
@@ -79,7 +79,7 @@ impl TangleTunesClient {
             .gas_price(1)
     }
 
-    pub fn undistribute(&self, song_id: SongId) -> TangleTunesCall<()> {
+    pub fn undistribute(&self, song_id: SongId) -> TTCall<()> {
         self.abi_client
             .undistribute(song_id.into())
             .legacy()
@@ -98,7 +98,7 @@ impl TangleTunesClient {
             .abi_client
             .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
             .legacy()
-            .gas(1_000_000)
+            .gas(1_000_000).block(BlockId::Number(BlockNumber::Pending))
             .gas_price(1)
             .tx;
 
@@ -238,15 +238,14 @@ mod test {
         let results = FuturesUnordered::new();
         for i in 0..100 {
             results.push(
-                app.client
+                dbg!(app.client
                     .edit_server_info("127.0.0.1:3000".to_string())
                     .send()
-                    .await?
-                    .with_client(&app.client)
-                    // .confirmations(0)
-                    // .await,
+                    .await)?
+                    .with_client(&app.client), // .confirmations(0)
+                                               // .await,
             );
-            tokio::time::sleep(Duration::from_millis(1000)).await;
+            // tokio::time::sleep(Duration::from_millis(1000)).await;
         }
 
         // while let Some(result) = results.next().await {

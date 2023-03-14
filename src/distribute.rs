@@ -5,13 +5,18 @@ use crate::library::{
     util::TransactionReceiptExt,
 };
 use color_eyre::Report;
+use ethers::{
+    types::transaction::eip2718::TypedTransaction,
+    utils::rlp::{Decodable, Rlp},
+};
 use ethers_providers::{Http, PendingTransaction, StreamExt};
 use eyre::Context;
 use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
 use std::{collections::VecDeque, net::SocketAddr, sync::Mutex, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
-    sync::oneshot, time::sleep,
+    sync::oneshot,
+    time::sleep,
 };
 use tokio_util::codec::{FramedRead, FramedWrite};
 
@@ -30,8 +35,6 @@ pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
         .send()
         .await?;
     sleep(Duration::from_secs(1)).await;
-
-
 
     println!("Registering songs");
     tokio::select! {
@@ -133,6 +136,10 @@ async fn handle_new_listener(
             // Decode the parameters we care about
             let (song_id, from, amount) = {
                 let decoded_call = app.client.decode_get_chunks_tx_rlp(&tx_rlp)?;
+                println!(
+                    "Nonce = {:?}",
+                    TypedTransaction::decode(&Rlp::new(&tx_rlp))?.nonce()
+                );
                 if decoded_call.distributor != app.client.wallet_address() {
                     bail!(
                         "Distributor address is not my address!: {}, {}",

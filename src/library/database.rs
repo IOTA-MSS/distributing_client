@@ -114,7 +114,6 @@ impl Database {
 
     /// Add a song to the database
     pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
-        println!("Inserting song: {id:?}, slice: {:?}", id.as_slice());
         sqlx::query(
             "
             INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
@@ -138,10 +137,7 @@ impl Database {
         .fetch_all(&mut self.acquire().await?)
         .await?
         .into_iter()
-        .map(|(id, bool)| {
-            println!("Got song: {id:?}");
-            (id.try_into().unwrap(), bool)
-        })
+        .map(|(id, bool)| (id.try_into().unwrap(), bool))
         .collect();
 
         Ok(row)
