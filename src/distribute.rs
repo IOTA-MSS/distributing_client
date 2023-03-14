@@ -293,7 +293,7 @@ pub async fn deregister_for_songs(app: &AppData) -> eyre::Result<()> {
 
     while let Some(result) = pending_transactions.next().await {
         match result {
-            Ok((_, song_id)) => println!("Registered song {song_id}"),
+            Ok((_, song_id)) => println!("Deregistered song {song_id}"),
             Err(e) => println!("ERROR: {e}"),
         }
     }
