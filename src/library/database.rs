@@ -114,7 +114,7 @@ impl Database {
 
     /// Add a song to the database
     pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
-        println!("Inserting song: {id:?}");
+        println!("Inserting song: {id:?}, slice: {:?}", id.as_slice());
         sqlx::query(
             "
             INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
