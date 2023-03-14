@@ -75,9 +75,10 @@ async fn accept_connections(
 
 async fn handle_new_listener(
     stream: &mut TcpStream,
-    _addr: SocketAddr,
+    addr: SocketAddr,
     app: &'static AppData,
 ) -> eyre::Result<()> {
+    println!("Accepted connetion from {addr}");
     static DEBT_LIMIT: u32 = 3;
     let (read_stream, write_stream) = stream.split();
     let mut read_stream = FramedRead::new(read_stream, RequestChunksDecoder::new());
@@ -105,7 +106,7 @@ async fn handle_new_listener(
                 let (pending_tx, amount) = pending_tx?;
                 pending_txs_stage_1.pop_front().unwrap();
                 pending_txs_stage_2.push(Box::pin(async move {
-                    let _receipt = dbg!(pending_tx.await?.unwrap());
+                    dbg!(pending_tx.await)?.unwrap();
                     Ok(amount as i32)
                 }));
                 None
@@ -149,7 +150,9 @@ async fn handle_new_listener(
             // And push the request and pending transaction to the lists.
             open_requests.push_back((song_id, from, amount));
             pending_txs_stage_1.push_back(Box::pin(async move {
+                println!("Sending raw transaction to the smart-contract...");
                 let pending_tx = dbg!(app.client.send_raw_tx(tx_rlp.freeze().into()).await)?;
+                sleep(Duration::from_secs(1)).await;
                 Ok((pending_tx, amount))
             }));
         };
@@ -183,6 +186,8 @@ async fn handle_new_listener(
                 .database
                 .get_chunks(song_id, start_chunk as u32, chunk_amount as u32)
                 .await?;
+
+            println!("Sending {chunk_amount} chunks starting at {start_chunk} over TCP.");
 
             write_stream
                 .send((start_chunk as u32, &chunks.into()))

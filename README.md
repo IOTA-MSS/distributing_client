@@ -18,13 +18,13 @@
 5. (New wallet only): Deposit to your wallet (`cargo run -- wallet address`) with metamask or the debug faucet.
 5. (New wallet only): Deposit to your account with `cargo run -- account deposit <AMOUNT>`.
 6. Add songs to your database. For example:
-    - `cargo run -- songs add mp3/0x51dba6a00c006f51b012f6e6c1516675ee4146e03628e3567980ed1c354441f2.mp3` (Validated song)
+    - `cargo run -- songs add mp3/0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf.mp3` (Validated song)
     - `cargo run -- songs add mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3` (Unvalidated song)
 7. Start distributing the songs with `cargo run -- distribute`.
 
 ## Downloading to a file
 ```sh
-cargo run -- songs download --ip localhost:3000 --start 0 --chunks 10 --to-file ./target/output.mp3 --song 0x51dba6a00c006f51b012f6e6c1516675ee4146e03628e3567980ed1c354441f2
+cargo run -- songs download --ip localhost:3000 --start 0 --chunks 10 --to-file ./target/output.mp3 --song 0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf
 ```
 
 ## Reset database
