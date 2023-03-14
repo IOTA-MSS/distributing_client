@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigFile {
-    port: u16,
-    contract_address: String,
-    node_url: String,
-    database_path: String,
-    chain_id: u16,
-    fee: u32,
-    ip_address: String,
+    pub port: u16,
+    pub contract_address: String,
+    pub node_url: String,
+    pub database_path: String,
+    pub chain_id: u16,
+    pub fee: u32,
+    pub ip_address: String,
 }
 
 impl ConfigFile {

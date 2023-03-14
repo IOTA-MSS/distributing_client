@@ -1,9 +1,15 @@
 use crate::library::{app::AppData, crypto::Wallet, database::Database, util::to_hex_prefix};
 use std::io::stdin;
 
-pub async fn run_generate(password: Option<String>, app: &'static AppData) -> eyre::Result<()> {
-    let key = Wallet::generate(app.chain_id).private_key();
-    set_key_with_confirmation(&app.database, key, password).await?;
+pub async fn run_generate(password: Option<String>, database: Database) -> eyre::Result<()> {
+    let key = Wallet::generate(1074).private_key();
+    set_key_with_confirmation(&database, key, password).await?;
+    Ok(())
+}
+
+pub async fn run_import(password: Option<String>, key: String, database: Database) -> eyre::Result<()> {
+    set_key_with_confirmation(&database, key, password).await?;
+
     Ok(())
 }
 
@@ -11,11 +17,7 @@ pub async fn run_remove(app: &'static AppData) -> eyre::Result<()> {
     todo!()
 }
 
-pub async fn run_import(password: Option<String>, key: String, cfg: &'static AppData) -> eyre::Result<()> {
-    set_key_with_confirmation(&cfg.database, key, password).await?;
 
-    Ok(())
-}
 
 pub async fn run_export_address(app: &'static AppData) -> eyre::Result<()> {
     println!("Your address: {:?}", app.client.wallet_address());

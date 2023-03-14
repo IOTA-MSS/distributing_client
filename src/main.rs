@@ -1,7 +1,7 @@
 use args::{AccountCommand, Args, Command, SongsCommand, WalletCommand};
 use clap::Parser;
 use config::ConfigFile;
-use library::{app::AppData, crypto};
+use library::{app::AppData, crypto, database::Database};
 use tokio::runtime::Runtime;
 #[macro_use]
 extern crate eyre;
@@ -20,11 +20,32 @@ fn main() -> eyre::Result<()> {
     Runtime::new().unwrap().block_on(async move {
         color_eyre::install().unwrap();
         let args = Args::parse();
-        let app = ConfigFile::from_path(&args.config)?
-            .into_app_builder(args.password, &args.config)
-            .build()
-            .await?;
-        run_command(app, args.command).await
+        let config = ConfigFile::from_path(&args.config)?;
+
+        match &args.command {
+            Command::Wallet(WalletCommand::Import {
+                key,
+                plaintext: _,
+                password,
+            }) => {
+                let database = Database::initialize(&config.database_path).await?;
+                crate::wallet::run_import(password.to_owned(), key.to_owned(), database).await
+            }
+            Command::Wallet(WalletCommand::Generate {
+                plaintext: _,
+                password,
+            }) => {
+                let database = Database::initialize(&config.database_path).await?;
+                crate::wallet::run_generate(password.to_owned(), database).await
+            }
+            _ => {
+                let app = ConfigFile::from_path(&args.config)?
+                    .into_app_builder(args.password, &args.config)
+                    .build()
+                    .await?;
+                run_command(app, args.command).await
+            }
+        }
     })
 }
 
@@ -35,7 +56,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 key,
                 plaintext: _,
                 password,
-            } => crate::wallet::run_import(password, key, app).await,
+            } => unreachable!(),
             WalletCommand::Remove => crate::wallet::run_remove(app).await,
             WalletCommand::Address => crate::wallet::run_export_address(app).await,
             WalletCommand::PrivateKey { plaintext: _ } => {
@@ -44,7 +65,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
             WalletCommand::Generate {
                 plaintext: _,
                 password,
-            } => crate::wallet::run_generate(password, app).await,
+            } => unreachable!(),
         },
         Command::Songs(command) => match command {
             SongsCommand::Download {
