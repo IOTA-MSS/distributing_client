@@ -1,69 +1,90 @@
-use crate::util::SongId;
+use crate::library::util::SongId;
 
 use super::{
-    abi::{DepositCall, GetChunksCall, TangleTunesAbi},
+    abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
-    receipt_ext::TransactionReceiptExt,
+    util::TransactionReceiptExt,
 };
 use ethers::{
-    abi::{AbiDecode, AbiEncode},
+    abi::AbiDecode,
     prelude::*,
     signers::LocalWallet,
     types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt},
     utils::rlp::{Decodable, Rlp},
 };
+use ethers_core::k256::ecdsa::SigningKey;
 use ethers_providers::{Http, Middleware, Provider};
 use std::{ops::Deref, str::FromStr, sync::Arc};
 
-type PendingTangleTunesTransaction<'a> = PendingTransaction<'a, Http>;
-
 pub type TangleTunesCall<T> =
-    ContractCall<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>, T>;
+    ContractCall<NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>, T>;
 
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
 pub struct TangleTunesClient {
     pub abi_client:
-        TangleTunesAbi<SignerMiddleware<NonceManagerMiddleware<Provider<Http>>, LocalWallet>>,
-    wallet: Wallet,
+        TangleTunesAbi<NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>>,
 }
 
 impl TangleTunesClient {
-    pub async fn get_receipt(&self, hash: impl Into<TxHash>) -> eyre::Result<TransactionReceipt> {
-        match self
-            .abi_client
-            .client_ref()
-            .get_transaction_receipt(hash.into())
-            .await
-        {
-            Ok(receipt) => receipt.ok_or(eyre!("No transaction receipt")),
-            Err(e) => Err(e.into()),
-        }
+    pub fn pending_tx(
+        &self,
+        hash: impl Into<TxHash>,
+        confirmations: usize,
+    ) -> PendingTransaction<'_, Http> {
+        PendingTransaction::new(hash.into(), self.abi_client.client_ref().inner().inner())
+            .confirmations(confirmations)
     }
+
     pub async fn initialize(
         wallet: Wallet,
         node_url: &str,
         contract_address: &str,
     ) -> eyre::Result<Self> {
+        let wallet_address = wallet.address();
         let contract = Self {
             abi_client: TangleTunesAbi::new(
                 Address::from_str(contract_address).unwrap(),
-                Arc::new(SignerMiddleware::new(
-                    NonceManagerMiddleware::new(Provider::try_from(node_url)?, wallet.address()),
-                    wallet.local_wallet().clone(),
-                )),
+                Arc::new(
+                    Provider::try_from(node_url)?
+                        .with_signer(wallet.local_wallet().clone())
+                        .nonce_manager(wallet_address),
+                ),
             ),
-            wallet,
         };
 
         contract
             .abi_client
             .client_ref()
-            .inner()
             .initialize_nonce(None)
             .await?;
 
         Ok(contract)
+    }
+
+    pub fn distribute(&self, song_id: SongId, fee: u32) -> TangleTunesCall<()> {
+        self.abi_client
+            .distribute(song_id.into(), fee.into())
+            .gas(1_000_000)
+            .gas_price(1)
+            .legacy()
+    }
+
+    pub fn edit_server_info(&self, address: String) -> TangleTunesCall<()> {
+        println!("EDIT_SERVER_INFO: {address}");
+        self.abi_client
+            .edit_server_info(address)
+            .legacy()
+            .gas(1_000_000)
+            .gas_price(1)
+    }
+
+    pub fn undistribute(&self, song_id: SongId) -> TangleTunesCall<()> {
+        self.abi_client
+            .undistribute(song_id.into())
+            .legacy()
+            .gas(1_000_000)
+            .gas_price(1)
     }
 
     pub async fn get_chunks_rlp(
@@ -77,16 +98,13 @@ impl TangleTunesClient {
             .abi_client
             .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
             .legacy()
-            .gas(100_000)
+            .gas(1_000_000)
             .gas_price(1)
             .tx;
 
-        tx.set_nonce(self.abi_client.client_ref().inner().next());
-
-        dbg!(tx.nonce());
-        let rlp = tx.rlp_signed(&self.wallet.local_wallet().sign_transaction_sync(&tx));
-
-        Ok(rlp)
+        tx.set_nonce(self.abi_client.client_ref().next());
+        let signature = self.wallet().sign_transaction_sync(&tx);
+        Ok(tx.rlp_signed(&signature))
     }
 
     pub fn decode_get_chunks_tx_rlp(&self, tx_rlp: &[u8]) -> eyre::Result<GetChunksCall> {
@@ -113,66 +131,29 @@ impl TangleTunesClient {
             .abi_client
             .deposit()
             .value(amount)
-            .gas(100_000)
+            .gas(1_000_000)
             .gas_price(1)
             .legacy()
             .send()
             .await?
             .await?
             .unwrap()
-            .status_is_ok()?;
+            .status_is_ok("Could not register deposit")?;
         Ok(receipt)
-    }
-
-    pub fn distribute2(&self, song_id: SongId, fee: u32) -> eyre::Result<TangleTunesCall<()>> {
-        Ok(self
-            .abi_client
-            .distribute(song_id.into(), fee.into())
-            .gas(100_000)
-            .gas_price(1)
-            .legacy())
-    }
-
-    pub async fn distribute(
-        &self,
-        song_id: SongId,
-        fee: u32,
-    ) -> eyre::Result<TransactionReceipt> {
-        let receipt = self
-            .abi_client
-            .distribute(song_id.into(), fee.into())
-            .gas(100_000)
-            .gas_price(1)
-            .legacy()
-            .send()
-            .await?
-            .await?
-            .unwrap()
-            .status_is_ok()?;
-        Ok(receipt)
-    }
-
-    pub fn undistribute(&self, song_id: SongId) -> eyre::Result<TangleTunesCall<()>> {
-        Ok(self
-            .abi_client
-            .undistribute(song_id.into())
-            .gas(100_000)
-            .gas_price(1)
-            .legacy())
     }
 
     pub async fn withdraw(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
         let receipt = self
             .abi_client
             .withdraw(amount.into())
-            .gas(100_000)
+            .gas(1_000_000)
             .gas_price(1)
             .legacy()
             .send()
             .await?
             .await?
             .unwrap()
-            .status_is_ok()?;
+            .status_is_ok("Could not register withdraw")?;
         Ok(receipt)
     }
 
@@ -187,7 +168,7 @@ impl TangleTunesClient {
             .await?
             .await?
             .unwrap()
-            .status_is_ok()?;
+            .status_is_ok("Could not register delete user")?;
         Ok(receipt)
     }
 
@@ -214,57 +195,65 @@ impl TangleTunesClient {
         Ok(receipt)
     }
 
-    pub(crate) fn client_address(&self) -> Address {
-        self.abi_client.address()
+    pub async fn nonce(&self) -> eyre::Result<U256> {
+        Ok(self.abi_client.client_ref().initialize_nonce(None).await?)
     }
 
     pub(crate) fn wallet_address(&self) -> Address {
-        self.abi_client.client_ref().signer().address()
+        self.wallet().address()
+    }
+
+    pub(crate) fn wallet_private_key(&self) -> &SigningKey {
+        self.wallet().signer()
+    }
+
+    fn wallet(&self) -> &LocalWallet {
+        self.abi_client.client_ref().inner().signer()
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::time::Duration;
+
     use ethers::abi::Address;
+    use ethers_providers::{PendingTransaction, StreamExt};
+    use futures::stream::FuturesUnordered;
     // use hex::FromHex;
 
-    use crate::{library::crypto::Wallet, test, util::to_hex_prefix};
+    use crate::{
+        library::crypto::Wallet,
+        library::{
+            app::AppData,
+            util::{to_hex_prefix, PendingTransactionExt},
+        },
+        test,
+    };
 
+    #[ignore]
     #[tokio::test]
-    async fn deposit_money_to_wallet() {
-        let wallet = Wallet::generate(test::CHAIN_ID);
+    async fn send_many_transactions() -> eyre::Result<()> {
+        let app: &'static AppData = AppData::init_for_test(None, false).await?;
 
-        // let client = TangleTunesClient::initialize(&wallet, TEST_NODE_URL, TEST_CONTRACT_ADDRESS)
-        //     .await
-        //     .unwrap(); TODO: Rewrite this test
+        let results = FuturesUnordered::new();
+        for i in 0..100 {
+            results.push(
+                app.client
+                    .edit_server_info("127.0.0.1:3000".to_string())
+                    .send()
+                    .await?
+                    .with_client(&app.client)
+                    // .confirmations(0)
+                    // .await,
+            );
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+        }
 
-        // let address = client.client.address();
-        // send_funds_to(&address, 1000).await;
-        // client.call_users(address).await.unwrap();
-        // client
-        //     .call_create_user("Testing", "Test account")
-        //     .await
-        //     .unwrap();
-        // client.call_users(address).await.unwrap();
-    }
+        // while let Some(result) = results.next().await {
+        //     dbg!(result);
+        // }
 
-
-
-    #[tokio::test]
-    async fn test() {
-        // let call: ContractCall<_, ()> = self
-        //     .client
-        //     .get_chunk(
-        //         [
-        //             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        //             0, 0, 0, 0, 0, 0,
-        //         ],
-        //         10.into(),
-        //     )
-        //     .legacy();
-        // let TypedTransaction::Legacy(tx) = call.tx else {
-        //     panic!();
-        // };
+        Ok(())
     }
 
     async fn send_funds_to(address: &Address, amount: u64) -> std::process::Output {

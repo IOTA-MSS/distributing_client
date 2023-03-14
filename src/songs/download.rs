@@ -1,9 +1,9 @@
 use crate::{
+    library::util::SongId,
     library::{
-        app::App,
-        protocol::{RequestChunksEncoder, SendChunksDecoder},
+        app::AppData,
+        tcp::{RequestChunksEncoder, SendChunksDecoder},
     },
-    util::SongId,
     BYTES_PER_CHUNK_USIZE,
 };
 use ethers_providers::StreamExt;
@@ -14,8 +14,8 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 
 const CHUNKS_PER_REQUEST: usize = 5;
 
-pub async fn download(
-    cfg: App,
+pub async fn run_download(
+    app: &'static AppData,
     ip_address: String,
     song_id: String,
     to_file: Option<(String, usize, usize)>,
@@ -29,9 +29,7 @@ pub async fn download(
     let (read_stream, write_stream) = stream.split();
     let mut read_stream = FramedRead::new(read_stream, SendChunksDecoder::new());
     let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
-
-    let client = cfg.initialize_client(&cfg.database).await?;
-    let distributor_address = client.wallet_address();
+    let distributor_address = app.client.wallet_address();
 
     let mut song_buffer = vec![None; chunk_amount];
 
@@ -41,7 +39,8 @@ pub async fn download(
     {
         let request_size = Ord::min(CHUNKS_PER_REQUEST, chunk_amount - this_chunk_index);
 
-        let tx_rlp = client
+        let tx_rlp = app
+            .client
             .get_chunks_rlp(
                 song_id.clone(),
                 this_chunk_index,

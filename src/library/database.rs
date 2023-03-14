@@ -1,4 +1,4 @@
-use crate::util::SongId;
+use crate::library::util::SongId;
 use crate::BYTES_PER_CHUNK;
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
@@ -28,8 +28,15 @@ impl Database {
     /// Initializes the database.
     pub async fn initialize(path: impl AsRef<Path>) -> eyre::Result<Self> {
         let database = Self {
-            pool: DATABASE_POOL.get_or_try_init(|| block_on(Self::new_pool(path, 10)))?,
+            pool: DATABASE_POOL.get_or_try_init(|| block_on(Self::new_pool(path, 5)))?,
         };
+        database.create_tables().await?;
+        Ok(database)
+    }
+
+    pub async fn initialize_in_memory() -> eyre::Result<Self> {
+        let pool = Box::leak(Box::new(Self::new_pool(":memory:", 1).await?));
+        let database = Self { pool };
         database.create_tables().await?;
         Ok(database)
     }
@@ -91,13 +98,13 @@ impl Database {
         Ok(row)
     }
 
-    pub async fn set_distribution(&self, song_id: &SongId, distribute: bool) -> eyre::Result<()> {
+    pub async fn set_distribution(&self, song_id: &SongId, distributing: bool) -> eyre::Result<()> {
         sqlx::query(
             "
             UPDATE songs SET distributing = ?1 WHERE id = $2;
             ",
         )
-        .bind(distribute)
+        .bind(distributing)
         .bind(song_id.as_slice())
         .execute(&mut self.acquire().await?)
         .await?;
@@ -106,19 +113,14 @@ impl Database {
     }
 
     /// Add a song to the database
-    pub async fn add_song(
-        &self,
-        id: &SongId,
-        distributing: bool,
-        song_data: &[u8],
-    ) -> eyre::Result<()> {
+    pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
         sqlx::query(
             "
             INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
             ",
         )
         .bind(id.as_slice())
-        .bind(distributing)
+        .bind(false)
         .bind(song_data)
         .execute(&mut self.acquire().await?)
         .await?;
@@ -126,7 +128,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_songs_metadata(&self) -> eyre::Result<Vec<(SongId, bool)>> {
+    pub async fn get_songs_info(&self) -> eyre::Result<Vec<(SongId, bool)>> {
         let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
             "
             SELECT id, distributing FROM songs
@@ -185,10 +187,7 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        test,
-        util::{to_hex_prefix, try_from_hex_prefix},
-    };
+    use crate::test;
 
     use super::*;
 
@@ -205,13 +204,6 @@ mod test {
 
             Ok(())
         }
-
-        async fn initialize_in_memory() -> eyre::Result<Self> {
-            let pool = Box::leak(Box::new(Self::new_pool(":memory:", 1).await?));
-            let database = Self { pool };
-            database.create_tables().await?;
-            Ok(database)
-        }
     }
 
     #[tokio::test]
@@ -222,7 +214,7 @@ mod test {
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, &song_data).await?;
 
         let (chunks, _) = db.get_chunks(&unvalidated_song_id, 0, 50).await?;
         assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
@@ -257,9 +249,9 @@ mod test {
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, &song_data).await?;
         let (db_data, distribute) = db.get_chunks(&unvalidated_song_id, 0, 100).await?;
-        assert!(distribute);
+        assert!(!distribute);
         assert_eq!(song_data, db_data);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
@@ -271,27 +263,28 @@ mod test {
     #[tokio::test]
     async fn song_metadata() -> eyre::Result<()> {
         let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+        let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.get_songs_metadata().await?.len(), 0);
+        assert_eq!(db.get_songs_info().await?.len(), 0);
 
         let song_data = std::fs::read(
-            "mp3/0x51dba6a00c006f51b012f6e6c1516675ee4146e03628e3567980ed1c354441f2.mp3",
+            "mp3/0x8b3d8bfd0c161381ce232660cd0b2262109b27be18989870406b5d0b986e60f9.mp3",
         )?;
-        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_songs_metadata().await?.len(), 1);
+        assert_eq!(db.get_songs_info().await?.len(), 1);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        db.add_song(&validated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_songs_metadata().await?.len(), 2);
+        assert_eq!(db.get_songs_info().await?.len(), 2);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
 
-        assert_eq!(db.get_songs_metadata().await?.len(), 1);
+        assert_eq!(db.get_songs_info().await?.len(), 1);
 
         Ok(())
     }
@@ -316,13 +309,13 @@ mod test {
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
-        db.add_song(&unvalidated_song_id, true, &song_data).await?;
+        db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, true);
-        db.set_distribution(&unvalidated_song_id, false).await?;
         assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, false);
         db.set_distribution(&unvalidated_song_id, true).await?;
         assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, true);
+        db.set_distribution(&unvalidated_song_id, false).await?;
+        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, false);
 
         Ok(())
     }

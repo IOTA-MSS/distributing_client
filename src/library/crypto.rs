@@ -6,7 +6,7 @@ use ethers::{
 use eyre::Context;
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
-use crate::util::{try_from_hex_prefix, to_hex_prefix};
+use crate::library::util::{to_hex_prefix, try_from_hex_prefix};
 
 /// A wrapper around the `LocalWallet`.
 #[derive(Clone, Debug)]

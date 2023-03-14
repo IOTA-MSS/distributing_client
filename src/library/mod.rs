@@ -3,7 +3,8 @@ pub mod database;
 pub mod crypto;
 pub mod abi;
 pub mod app;
-pub mod protocol;
-pub mod receipt_ext;
+pub mod tcp;
 pub mod pending_txs;
+pub mod nonce_middleware;
+pub mod util;
 

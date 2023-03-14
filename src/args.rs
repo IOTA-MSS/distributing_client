@@ -136,9 +136,9 @@ pub enum SongsCommand {
         /// The paths to find the songs stored as "{(0x)0AC..34}.mp3"
         paths: Vec<String>,
 
-        /// Do not distribute this song
-        #[arg(long, short)]
-        no_distribute: bool,
+        // /// Do not distribute this song
+        // #[arg(long, short)]
+        // no_distribute: bool,
     },
 
     /// Remove a song from the database

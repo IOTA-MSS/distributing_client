@@ -4,6 +4,7 @@
 3. Create the file `TangleTunes.toml` in the root of the repository and paste in the following:
     ```toml
     port = 3000
+    ip_address = "127.0.0.1" # Replace this by the IP-address to expose
     contract_address = "0x8fA1fc1Eec824a36fD31497EAa8716Fc9C446d51"
     node_url = 	"http://217.104.126.34:9090/chains/tst1pr2j82svscklywxj8gyk3dt5jz3vpxhnl48hh6h6rn0g8dfna0zsceya7up/evm"
     database_path = "./target/database"
