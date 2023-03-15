@@ -34,20 +34,22 @@ pub async fn run_add(paths: Vec<String>, distribute: bool, cfg: &'static AppData
 }
 
 pub async fn run_stop_distribution(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
-    for id in ids {
-        cfg.database
-            .set_distribution(&SongId::try_from_hex(id)?, false)
-            .await?;
-    }
+    // for id in ids {
+    //     cfg.database
+    //         .set_distribution(&SongId::try_from_hex(id)?, false)
+    //         .await?;
+    // }
+    unimplemented!();
     Ok(())
 }
 
 pub async fn run_start_distribution(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
-    for id in ids {
-        cfg.database
-            .set_distribution(&SongId::try_from_hex(id)?, true)
-            .await?;
-    }
+    todo!();
+    // for id in ids {
+    //     cfg.database
+    //         .set_distribution(&SongId::try_from_hex(id)?, true)
+    //         .await?;
+    // }
     Ok(())
 }
 
@@ -56,8 +58,8 @@ pub async fn run_set_fee(ids: Vec<String>, fee: u32, app: &'static AppData) -> e
 }
 
 pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
-    for (song_id, distributing) in app.database.get_songs_info().await? {
-        println!("{song_id}: distributing = {distributing}")
+    for (i, song_id) in app.database.get_song_ids().await?.into_iter().enumerate() {
+        println!("{i}: {song_id}");
     }
     Ok(())
 }

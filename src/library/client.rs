@@ -98,7 +98,8 @@ impl TangleTunesClient {
             .abi_client
             .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
             .legacy()
-            .gas(1_000_000).block(BlockId::Number(BlockNumber::Pending))
+            .gas(1_000_000)
+            .block(BlockId::Number(BlockNumber::Pending))
             .gas_price(1)
             .tx;
 
@@ -114,7 +115,7 @@ impl TangleTunesClient {
 
     pub async fn send_raw_tx<'a>(
         &'a self,
-        rlp: Bytes,
+        tx: Bytes,
     ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
         Ok(self
             .abi_client
@@ -122,7 +123,7 @@ impl TangleTunesClient {
             .client_ref()
             .inner()
             .inner()
-            .send_raw_transaction(rlp)
+            .send_raw_transaction(tx)
             .await?)
     }
 
@@ -214,20 +215,15 @@ impl TangleTunesClient {
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
-
     use ethers::abi::Address;
-    use ethers_providers::{PendingTransaction, StreamExt};
     use futures::stream::FuturesUnordered;
     // use hex::FromHex;
 
     use crate::{
-        library::crypto::Wallet,
         library::{
             app::AppData,
             util::{to_hex_prefix, PendingTransactionExt},
         },
-        test,
     };
 
     #[ignore]
@@ -238,12 +234,14 @@ mod test {
         let results = FuturesUnordered::new();
         for i in 0..100 {
             results.push(
-                dbg!(app.client
-                    .edit_server_info("127.0.0.1:3000".to_string())
-                    .send()
-                    .await)?
-                    .with_client(&app.client), // .confirmations(0)
-                                               // .await,
+                dbg!(
+                    app.client
+                        .edit_server_info("127.0.0.1:3000".to_string())
+                        .send()
+                        .await
+                )?
+                .with_client(&app.client), // .confirmations(0)
+                                           // .await,
             );
             // tokio::time::sleep(Duration::from_millis(1000)).await;
         }

@@ -98,19 +98,19 @@ impl Database {
         Ok(row)
     }
 
-    pub async fn set_distribution(&self, song_id: &SongId, distributing: bool) -> eyre::Result<()> {
-        sqlx::query(
-            "
-            UPDATE songs SET distributing = ?1 WHERE id = $2;
-            ",
-        )
-        .bind(distributing)
-        .bind(song_id.as_slice())
-        .execute(&mut self.acquire().await?)
-        .await?;
+    // pub async fn set_distribution(&self, song_id: &SongId, distributing: bool) -> eyre::Result<()> {
+    //     sqlx::query(
+    //         "
+    //         UPDATE songs SET distributing = ?1 WHERE id = $2;
+    //         ",
+    //     )
+    //     .bind(distributing)
+    //     .bind(song_id.as_slice())
+    //     .execute(&mut self.acquire().await?)
+    //     .await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     /// Add a song to the database
     pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
@@ -128,8 +128,8 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_songs_info(&self) -> eyre::Result<Vec<(SongId, bool)>> {
-        let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
+    pub async fn get_song_ids(&self) -> eyre::Result<Vec<SongId>> {
+        let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
             SELECT id, distributing FROM songs
             ",
@@ -137,7 +137,7 @@ impl Database {
         .fetch_all(&mut self.acquire().await?)
         .await?
         .into_iter()
-        .map(|(id, bool)| (id.try_into().unwrap(), bool))
+        .map(|(id, )| id.try_into().unwrap())
         .collect();
 
         Ok(row)
@@ -266,25 +266,25 @@ mod test {
         let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.get_songs_info().await?.len(), 0);
+        assert_eq!(db.get_song_ids().await?.len(), 0);
 
         let song_data = std::fs::read(
             "mp3/0x8b3d8bfd0c161381ce232660cd0b2262109b27be18989870406b5d0b986e60f9.mp3",
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_songs_info().await?.len(), 1);
+        assert_eq!(db.get_song_ids().await?.len(), 1);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
         db.add_song(&validated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_songs_info().await?.len(), 2);
+        assert_eq!(db.get_song_ids().await?.len(), 2);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
 
-        assert_eq!(db.get_songs_info().await?.len(), 1);
+        assert_eq!(db.get_song_ids().await?.len(), 1);
 
         Ok(())
     }
@@ -298,24 +298,6 @@ mod test {
         assert_eq!(db.get_key().await?, Some(("test".to_string(), false)));
         db.set_key("test2", false).await?;
         assert_eq!(db.get_key().await?, Some(("test2".to_string(), false)));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn set_distribution() -> eyre::Result<()> {
-        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
-        let db = Database::initialize_in_memory().await?;
-        let song_data = std::fs::read(
-            "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
-        )?;
-        db.add_song(&unvalidated_song_id, &song_data).await?;
-
-        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, false);
-        db.set_distribution(&unvalidated_song_id, true).await?;
-        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, true);
-        db.set_distribution(&unvalidated_song_id, false).await?;
-        assert_eq!(db.get_chunks(&unvalidated_song_id, 0, 0).await?.1, false);
 
         Ok(())
     }

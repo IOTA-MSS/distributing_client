@@ -6,7 +6,7 @@ use crate::library::{
 };
 use color_eyre::Report;
 use ethers::{
-    types::transaction::eip2718::TypedTransaction,
+    types::{transaction::eip2718::TypedTransaction, Bytes, U256},
     utils::rlp::{Decodable, Rlp},
 };
 use ethers_providers::{Http, PendingTransaction, StreamExt};
@@ -82,7 +82,8 @@ async fn handle_new_listener(
     app: &'static AppData,
 ) -> eyre::Result<()> {
     println!("Accepted connetion from {addr}");
-    static DEBT_LIMIT: u32 = 3;
+    const DEBT_LIMIT: u32 = 10;
+
     let (read_stream, write_stream) = stream.split();
     let mut read_stream = FramedRead::new(read_stream, RequestChunksDecoder::new());
     let mut write_stream = FramedWrite::new(write_stream, SendChunksEncoder);
@@ -93,30 +94,19 @@ async fn handle_new_listener(
     let mut open_requests: VecDeque<(SongId, i32, i32)> = VecDeque::new();
 
     // The transactions that will resolve with the amount of credit gained from them.
-    let mut pending_txs_stage_1 =
-        VecDeque::<BoxFuture<'static, eyre::Result<(PendingTransaction<Http>, i32)>>>::new();
-    let mut pending_txs_stage_2 = FuturesUnordered::<BoxFuture<'static, eyre::Result<i32>>>::new();
+    let mut pending_transactions = VecDeque::<BoxFuture<'static, eyre::Result<i32>>>::new();
 
     'outer: loop {
         let tcp_msg = tokio::select! {
             Some(pending_tx) = async {
-                if let Some(pending_tx) = &mut pending_txs_stage_1.front_mut() {
+                if let Some(pending_tx) = &mut pending_transactions.front_mut() {
                     Some(pending_tx.await)
                 } else {
                     None
                 }
             } => {
-                let (pending_tx, amount) = pending_tx?;
-                pending_txs_stage_1.pop_front().unwrap();
-                pending_txs_stage_2.push(Box::pin(async move {
-                    dbg!(pending_tx.await)?.unwrap();
-                    Ok(amount as i32)
-                }));
-                None
-            }
-
-            Some(new_credit) = pending_txs_stage_2.next() => {
-                credit = credit.checked_add(new_credit?).unwrap();
+                    pending_transactions.pop_front().unwrap();
+                credit = credit.checked_add(pending_tx?).unwrap();
                 None
             }
 
@@ -132,14 +122,13 @@ async fn handle_new_listener(
 
         if let Some(tcp_msg) = tcp_msg {
             let Ok(tx_rlp) = tcp_msg else { todo!("{tcp_msg:?}")};
+            let tx_rlp = Bytes(tx_rlp.freeze());
+            let tx = TypedTransaction::decode(&Rlp::new(&tx_rlp))?;
+            let nonce = *tx.nonce().unwrap();
 
             // Decode the parameters we care about
             let (song_id, from, amount) = {
                 let decoded_call = app.client.decode_get_chunks_tx_rlp(&tx_rlp)?;
-                println!(
-                    "Nonce = {:?}",
-                    TypedTransaction::decode(&Rlp::new(&tx_rlp))?.nonce()
-                );
                 if decoded_call.distributor != app.client.wallet_address() {
                     bail!(
                         "Distributor address is not my address!: {}, {}",
@@ -156,11 +145,14 @@ async fn handle_new_listener(
 
             // And push the request and pending transaction to the lists.
             open_requests.push_back((song_id, from, amount));
-            pending_txs_stage_1.push_back(Box::pin(async move {
-                println!("Sending raw transaction to the smart-contract...");
-                let pending_tx = dbg!(app.client.send_raw_tx(tx_rlp.freeze().into()).await)?;
-                sleep(Duration::from_secs(1)).await;
-                Ok((pending_tx, amount))
+            pending_transactions.push_back(Box::pin(async move {
+                println!("Sending transaction with nonce {:?}", tx.nonce());
+                let pending_tx = app
+                    .client
+                    .send_raw_tx(tx_rlp.clone())
+                    .await?
+                    .await?;
+                Ok(amount)
             }));
         };
 
@@ -185,7 +177,7 @@ async fn handle_new_listener(
                 *amount -= amount_now;
                 *from += amount_now;
 
-                dbg!((amount_now, from_now))
+                (amount_now, from_now)
             };
 
             // Get the chunks from the database
@@ -210,20 +202,18 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
 
     // Send all transactions until complete or an error is encountered
     let sending_txs_result = {
-        for (song_id, _) in app
-            .database
-            .get_songs_info()
-            .await?
-            .into_iter()
-            .filter(|(_, distributing)| !distributing)
-        {
+        for song_id in app.database.get_song_ids().await? {
             println!(
                 "Registering for distribution of song {song_id} with nonce {}...",
                 app.client.nonce().await?
             );
 
-            let tx_hash =
-                dbg!(app.client.distribute(song_id.clone(), app.fee).send().await)?.tx_hash();
+            let tx_hash = app
+                .client
+                .distribute(song_id.clone(), app.fee)
+                .send()
+                .await?
+                .tx_hash();
             sleep(Duration::from_secs(1)).await;
 
             pending_txs.push(async move {
@@ -232,7 +222,6 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
                     .pending_tx(tx_hash, 1)
                     .await?
                     .status_is_ok(&format!("Could not register song with id {song_id}"))?;
-                app.database.set_distribution(&song_id, true).await?;
                 Ok::<_, Report>((receipt, song_id))
             })
         }
@@ -264,13 +253,7 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
 pub async fn deregister_for_songs(app: &AppData) -> eyre::Result<()> {
     let mut pending_transactions = FuturesUnordered::new();
 
-    for (song_id, _) in app
-        .database
-        .get_songs_info()
-        .await?
-        .into_iter()
-        .filter(|(_, registered)| *registered)
-    {
+    for song_id in app.database.get_song_ids().await? {
         let result = {
             println!("Deregistering song {song_id} on the smart-contract..");
             let tx_hash = app
@@ -288,7 +271,6 @@ pub async fn deregister_for_songs(app: &AppData) -> eyre::Result<()> {
                     .await?
                     .unwrap()
                     .status_is_ok(&format!("Could not deregister song with id {song_id}"))?;
-                app.database.set_distribution(&song_id, false).await?;
                 Ok::<_, eyre::Report>((receipt, song_id))
             });
             Ok::<_, eyre::Report>(())
