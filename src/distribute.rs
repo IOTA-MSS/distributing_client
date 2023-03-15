@@ -9,7 +9,7 @@ use ethers::{
     types::{transaction::eip2718::TypedTransaction, Bytes, U256},
     utils::rlp::{Decodable, Rlp},
 };
-use ethers_providers::{Http, PendingTransaction, StreamExt};
+use ethers_providers::StreamExt;
 use eyre::Context;
 use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
 use std::{collections::VecDeque, net::SocketAddr, sync::Mutex, time::Duration};
@@ -147,11 +147,7 @@ async fn handle_new_listener(
             open_requests.push_back((song_id, from, amount));
             pending_transactions.push_back(Box::pin(async move {
                 println!("Sending transaction with nonce {:?}", tx.nonce());
-                let pending_tx = app
-                    .client
-                    .send_raw_tx(tx_rlp.clone())
-                    .await?
-                    .await?;
+                let pending_tx = app.client.send_raw_tx(tx_rlp.clone()).await?.await?;
                 Ok(amount)
             }));
         };
@@ -181,7 +177,7 @@ async fn handle_new_listener(
             };
 
             // Get the chunks from the database
-            let (chunks, _fee) = app
+            let chunks = app
                 .database
                 .get_chunks(song_id, start_chunk as u32, chunk_amount as u32)
                 .await?;

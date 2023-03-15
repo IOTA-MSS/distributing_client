@@ -13,6 +13,7 @@ use tokio::net::TcpStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const CHUNKS_PER_REQUEST: usize = 5;
+const REQUESTS_CONCURRENT: usize = 5;
 
 pub async fn run_download(
     app: &'static AppData,
@@ -20,7 +21,7 @@ pub async fn run_download(
     song_id: String,
     to_file: Option<(String, usize, usize)>,
 ) -> eyre::Result<()> {
-    let Some((file, chunk_index, chunk_amount)) = to_file else {
+    let Some((file, chunk_index, chunks_to_receive)) = to_file else {
         bail!("Downloading to database not yet implemented. Specify `--to_file <FILE>`")
     };
 
@@ -31,42 +32,43 @@ pub async fn run_download(
     let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
     let distributor_address = app.client.wallet_address();
 
-    let mut song_buffer = vec![None; chunk_amount];
+    let mut song_buffer = Vec::<u8>::with_capacity(chunks_to_receive);
+    let mut next_chunk_request_id = chunk_index;
 
-    for this_chunk_index in (chunk_index..chunk_index + chunk_amount)
-        .into_iter()
-        .step_by(CHUNKS_PER_REQUEST)
-    {
-        let request_size = Ord::min(CHUNKS_PER_REQUEST, chunk_amount - this_chunk_index);
+    while song_buffer.len() < chunks_to_receive {
+        if song_buffer.len() < next_chunk_request_id {
 
+        }
+        let request_size = Ord::min(
+            CHUNKS_PER_REQUEST,
+            chunks_to_receive - next_chunk_request_id,
+        );
         let tx_rlp = app
             .client
             .get_chunks_rlp(
                 song_id.clone(),
-                this_chunk_index,
+                next_chunk_request_id,
                 request_size,
                 distributor_address,
             )
             .await?;
-        dbg!(tx_rlp.len());
         write_stream.send(&tx_rlp.0).await?;
+        next_chunk_request_id += CHUNKS_PER_REQUEST;
 
-        let mut chunks_received = 0;
-        while chunks_received < request_size {
-            let (start_chunk_id, chunks) = read_stream.next().await.unwrap()?;
-            dbg!((start_chunk_id, chunks.len()));
+        let result = read_stream.next().await.ok_or(eyre!(
+            "Distributor closed stream before all data was received"
+        ))?;
+        let (start_chunk_id, chunks) = result?;
 
-            for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
-                chunks_received += 1;
-                song_buffer[chunk_id as usize] = Some(chunk.to_vec());
-            }
+        for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
+            assert_eq!(chunk_id as usize, song_buffer.len());
+            next_chunk_request_id += 1;
+            song_buffer.extend(chunk);
         }
     }
 
     let mut file = OpenOptions::new().write(true).create(true).open(file)?;
-    song_buffer.iter().for_each(|chunk| {
-        file.write_all(chunk.as_ref().unwrap()).unwrap();
-    });
+    file.write_all(&song_buffer)?;
     file.flush()?;
 
     Ok(())

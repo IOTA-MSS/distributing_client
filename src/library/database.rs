@@ -52,7 +52,6 @@ impl Database {
             "
             CREATE TABLE IF NOT EXISTS songs (
                 id BLOB NOT NULL UNIQUE,
-                distributing BOOL NOT NULL,
                 data BLOB NOT NULL
             );
     
@@ -98,29 +97,14 @@ impl Database {
         Ok(row)
     }
 
-    // pub async fn set_distribution(&self, song_id: &SongId, distributing: bool) -> eyre::Result<()> {
-    //     sqlx::query(
-    //         "
-    //         UPDATE songs SET distributing = ?1 WHERE id = $2;
-    //         ",
-    //     )
-    //     .bind(distributing)
-    //     .bind(song_id.as_slice())
-    //     .execute(&mut self.acquire().await?)
-    //     .await?;
-
-    //     Ok(())
-    // }
-
     /// Add a song to the database
     pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
         sqlx::query(
             "
-            INSERT INTO songs (id, distributing, data) VALUES (?1, ?2, ?3);
+            INSERT INTO songs (id, data) VALUES (?1, ?2);
             ",
         )
         .bind(id.as_slice())
-        .bind(false)
         .bind(song_data)
         .execute(&mut self.acquire().await?)
         .await?;
@@ -131,7 +115,7 @@ impl Database {
     pub async fn get_song_ids(&self) -> eyre::Result<Vec<SongId>> {
         let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
-            SELECT id, distributing FROM songs
+            SELECT id FROM songs
             ",
         )
         .fetch_all(&mut self.acquire().await?)
@@ -166,13 +150,13 @@ impl Database {
         id: &SongId,
         chunk_start: u32,
         chunks: u32,
-    ) -> eyre::Result<(Vec<u8>, bool)> {
+    ) -> eyre::Result<Vec<u8>> {
         let byte_start = (chunk_start * BYTES_PER_CHUNK) + 1; // First char/byte has i=1 in sqlite
         let bytes = chunks * BYTES_PER_CHUNK;
 
-        let row = sqlx::query_as::<_, (Vec<u8>, bool)>(
+        let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
-            SELECT substr(data, ?1, ?2), distributing FROM songs WHERE id = ?3
+            SELECT substr(data, ?1, ?2) FROM songs WHERE id = ?3
             ",
         )
         .bind(byte_start)
@@ -181,7 +165,7 @@ impl Database {
         .fetch_one(&mut self.acquire().await?)
         .await?;
 
-        Ok(row)
+        Ok(row.0)
     }
 }
 
@@ -216,20 +200,20 @@ mod test {
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 0, 50).await?;
+        let chunks = db.get_chunks(&unvalidated_song_id, 0, 50).await?;
         assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
 
-        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 0, 80).await?;
+        let chunks = db.get_chunks(&unvalidated_song_id, 0, 80).await?;
         assert_eq!(chunks.len(), 2113939);
         assert!(chunks.len() < 80 * BYTES_PER_CHUNK as usize);
 
-        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 10, 20).await?;
+        let chunks = db.get_chunks(&unvalidated_song_id, 10, 20).await?;
         assert_eq!(
             chunks,
             song_data[10 * BYTES_PER_CHUNK as usize..30 * BYTES_PER_CHUNK as usize]
         );
 
-        let (chunks, _) = db.get_chunks(&unvalidated_song_id, 30, 50).await?;
+        let chunks = db.get_chunks(&unvalidated_song_id, 30, 50).await?;
         assert_eq!(
             chunks[0..20 * BYTES_PER_CHUNK as usize],
             song_data[30 * BYTES_PER_CHUNK as usize..50 * BYTES_PER_CHUNK as usize]
@@ -250,8 +234,7 @@ mod test {
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
-        let (db_data, distribute) = db.get_chunks(&unvalidated_song_id, 0, 100).await?;
-        assert!(!distribute);
+        let db_data = db.get_chunks(&unvalidated_song_id, 0, 100).await?;
         assert_eq!(song_data, db_data);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
@@ -269,7 +252,7 @@ mod test {
         assert_eq!(db.get_song_ids().await?.len(), 0);
 
         let song_data = std::fs::read(
-            "mp3/0x8b3d8bfd0c161381ce232660cd0b2262109b27be18989870406b5d0b986e60f9.mp3",
+            "mp3/0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf.mp3",
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
 

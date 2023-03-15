@@ -1,21 +1,14 @@
+use super::client::TangleTunesClient;
 use ethers::{
-    prelude::ContractError,
-    types::{TransactionReceipt, H256},
+    types::TransactionReceipt,
     utils::hex::{FromHex, ToHex},
 };
-use ethers_providers::{Http, Middleware, PendingTransaction};
-use futures::{future::BoxFuture, stream::FuturesUnordered, Future, FutureExt, Stream};
+use ethers_providers::{Http, PendingTransaction};
 use std::{
-    collections::VecDeque,
     error::Error,
     fmt::{Debug, Display},
     ops::{Deref, DerefMut},
-    pin::Pin,
-    task::{Context, Poll},
 };
-use tokio::time::Sleep;
-
-use super::client::{TTCall, TTMiddleWare, TangleTunesClient};
 
 #[derive(Clone)]
 pub struct SongId([u8; 32]);
