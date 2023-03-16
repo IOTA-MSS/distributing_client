@@ -109,7 +109,7 @@ impl TransactionReceiptExt for TransactionReceipt {
             .ok_or_else(|| eyre!("Transaction without status: {self:?}"))?;
 
         if status != 1.into() {
-            Err(eyre!("Transaction failed (status = 0): {msg}"))
+            Err(eyre!("Transaction failed: status = 0, tx-hash = {:?}, {msg}.", self.transaction_hash))
         } else {
             Ok(self)
         }

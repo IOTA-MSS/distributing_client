@@ -1,22 +1,31 @@
 use crate::library::{
     app::AppData,
+    client::TangleTunesClient,
     tcp::{RequestChunksDecoder, SendChunksEncoder},
     util::SongId,
     util::TransactionReceiptExt,
 };
 use color_eyre::Report;
 use ethers::{
-    types::{transaction::eip2718::TypedTransaction, Bytes, U256},
+    types::{transaction::eip2718::TypedTransaction, Bytes},
     utils::rlp::{Decodable, Rlp},
 };
-use ethers_providers::StreamExt;
+use ethers_providers::{Http, PendingTransaction, StreamExt};
 use eyre::Context;
-use futures::{future::BoxFuture, stream::FuturesUnordered, SinkExt};
-use std::{collections::VecDeque, net::SocketAddr, sync::Mutex, time::Duration};
+use futures::{future::BoxFuture, stream::FuturesUnordered, Future, FutureExt, SinkExt, Stream};
+use std::{
+    collections::VecDeque,
+    fmt::Debug,
+    net::SocketAddr,
+    pin::Pin,
+    sync::Mutex,
+    task::{ready, Poll},
+    time::Duration,
+};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::oneshot,
-    time::sleep,
+    time::{sleep, Sleep},
 };
 use tokio_util::codec::{FramedRead, FramedWrite};
 
@@ -95,6 +104,7 @@ async fn handle_new_listener(
 
     // The transactions that will resolve with the amount of credit gained from them.
     let mut pending_transactions = VecDeque::<BoxFuture<'static, eyre::Result<i32>>>::new();
+    // let mut pending_transactions = PendingTxPool::new(&app.client);
 
     'outer: loop {
         let tcp_msg = tokio::select! {
@@ -110,6 +120,11 @@ async fn handle_new_listener(
                 None
             }
 
+            // Some(new_credit) = pending_transactions.next() => {
+            //     credit.checked_add(new_credit?).unwrap();
+            //     None
+            // }
+
             res = read_stream.next() => {
                 match res {
                     Some(msg) => {
@@ -123,8 +138,6 @@ async fn handle_new_listener(
         if let Some(tcp_msg) = tcp_msg {
             let Ok(tx_rlp) = tcp_msg else { todo!("{tcp_msg:?}")};
             let tx_rlp = Bytes(tx_rlp.freeze());
-            let tx = TypedTransaction::decode(&Rlp::new(&tx_rlp))?;
-            let nonce = *tx.nonce().unwrap();
 
             // Decode the parameters we care about
             let (song_id, from, amount) = {
@@ -145,9 +158,15 @@ async fn handle_new_listener(
 
             // And push the request and pending transaction to the lists.
             open_requests.push_back((song_id, from, amount));
+            // pending_transactions.push_transaction(tx_rlp, amount);
             pending_transactions.push_back(Box::pin(async move {
+                let tx = TypedTransaction::decode(&Rlp::new(&tx_rlp))?;
                 println!("Sending transaction with nonce {:?}", tx.nonce());
-                let pending_tx = app.client.send_raw_tx(tx_rlp.clone()).await?.await?;
+                app.client
+                    .send_raw_tx(tx_rlp.clone())
+                    .await?
+                    .await?
+                    .status_is_ok("")?;
                 Ok(amount)
             }));
         };
@@ -320,4 +339,193 @@ pub fn get_exit_signal() -> eyre::Result<oneshot::Receiver<()>> {
         let _ = EXIT_SIGNAL.lock().unwrap().take().unwrap().send(());
     })?;
     Ok(rx)
+}
+
+//------------------------------------------------------------------------------------------------
+//  PendingTxPool
+//------------------------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct PendingTxPool {
+    client: &'static TangleTunesClient,
+    transactions: Vec<PendingTx>,
+}
+
+impl PendingTxPool {
+    pub fn new(client: &'static TangleTunesClient) -> Self {
+        Self {
+            client,
+            transactions: Vec::new(),
+        }
+    }
+
+    pub fn push_transaction(&mut self, tx: Bytes, credit: i32) {
+        self.transactions
+            .push(PendingTx::new(&self.client, tx, credit));
+    }
+}
+
+impl Unpin for PendingTxPool {}
+
+impl Stream for PendingTxPool {
+    type Item = eyre::Result<i32>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let mut result = None;
+
+        println!("-- Polling tx-pool --");
+
+        // First poll the transaction that is stuck at stage 1.
+        if let Some((i, tx)) = self
+            .transactions
+            .iter_mut()
+            .enumerate()
+            .find(|(_, tx)| tx.is_at_stage_1())
+        {
+            println!("Polling transaction {i} at stage 1");
+            result = Some(tx.poll_unpin(cx)?.map(|credit| (i, credit)));
+        }
+
+        // If this did not set the result
+        if result.is_none() {
+            'inner: for (i, tx) in self.transactions.iter_mut().enumerate() {
+                if let Poll::Ready(credit) = tx.poll_unpin(cx)? {
+                    result = Some(Poll::Ready((i, credit)));
+                    break 'inner;
+                }
+            }
+        }
+
+        println!("-- Done polling tx-pool: {result:#?} --");
+
+        match result {
+            // Tx is ready, remove it and return that
+            Some(Poll::Ready((i, credit))) => {
+                self.transactions.remove(i);
+                Poll::Ready(Some(Ok(credit)))
+            }
+            Some(Poll::Pending) => Poll::Pending,
+            // No transaction is ready at the moment
+            None => match self.transactions.is_empty() {
+                true => Poll::Pending,
+                false => Poll::Ready(None),
+            },
+        }
+    }
+}
+
+struct PendingTx {
+    client: &'static TangleTunesClient,
+    bytes: Bytes,
+    credit: i32,
+    timeout_len: Duration,
+    retries_left: usize,
+    timeout: Option<Pin<Box<Sleep>>>,
+    stage1: Option<
+        Pin<
+            Box<
+                dyn Future<Output = eyre::Result<PendingTransaction<'static, Http>>>
+                    + Send
+                    + 'static,
+            >,
+        >,
+    >,
+    stage2: Option<PendingTransaction<'static, Http>>,
+}
+
+impl Debug for PendingTx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PendingTx")
+            .field("client", &self.client)
+            .field("bytes", &self.bytes)
+            .field("credit", &self.credit)
+            .field("timeout_len", &self.timeout_len)
+            .field("retries_left", &self.retries_left)
+            .field("timeout", &self.timeout)
+            .field("stage1", &self.stage1.as_ref().map(|_| &".."))
+            .field("stage2", &self.stage2)
+            .finish()
+    }
+}
+
+impl PendingTx {
+    pub fn is_at_stage_1(&self) -> bool {
+        self.stage2.is_none()
+    }
+
+    pub fn new(client: &'static TangleTunesClient, bytes: Bytes, credit: i32) -> Self {
+        Self {
+            client,
+            bytes,
+            credit,
+            timeout_len: Duration::from_millis(100),
+            retries_left: 8,
+            timeout: None,
+            stage1: None,
+            stage2: None,
+        }
+    }
+
+    fn try_set_next_timeout(&mut self) -> eyre::Result<()> {
+        if self.retries_left == 0 {
+            bail!("Max retries reached for tx")
+        }
+        if self.timeout.is_some() {
+            panic!("Timeout must be none before setting the next timeout")
+        }
+        self.retries_left -= 1;
+        self.timeout = Some(Box::pin(sleep(self.timeout_len)));
+        self.timeout_len *= 2;
+        Ok(())
+    }
+}
+
+impl Unpin for PendingTx {}
+
+impl Future for PendingTx {
+    type Output = eyre::Result<i32>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        println!("PendingTx is being polled now");
+        loop {
+            // Check if a timeout is set and wait for that first
+            if let Some(timeout) = &mut self.timeout {
+                ready!(timeout.poll_unpin(cx));
+                self.timeout = None;
+                self.timeout_len *= 2;
+            }
+
+            // Check if the tx is already at stage 2
+            if let Some(pending_tx) = &mut self.stage2 {
+                println!("POLLING STAGE 2: {pending_tx:?}");
+                ready!(dbg!(pending_tx.poll_unpin(cx)))
+                    .wrap_err("Transaction failed on second stage")?
+                    .status_is_ok("Transaction failed on second stage")?;
+                return Poll::Ready(Ok(self.credit));
+            };
+
+            match &mut self.stage1 {
+                // If the tx is already set, poll it
+                Some(future) => match dbg!(ready!(future.poll_unpin(cx))) {
+                    // Continue to stage 2
+                    Ok(pending_tx) => self.stage2 = Some(pending_tx),
+                    // Retry the transaction
+                    Err(e) => {
+                        println!("Retrying transaction with error: {e}");
+                        self.stage1 = None;
+                        self.try_set_next_timeout()?;
+                    }
+                },
+                // If it is not then we send a new transaction
+                None => {
+                    println!("Creating stage_1 future now!");
+                    let future = self.client.send_raw_tx(self.bytes.clone());
+                    self.stage1 = Some(Box::pin(future));
+                }
+            }
+        }
+    }
 }
