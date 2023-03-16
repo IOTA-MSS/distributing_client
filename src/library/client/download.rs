@@ -1,29 +1,30 @@
+use crate::{
+    library::{
+        client::TangleTunesClient,
+        tcp::{RequestChunksEncoder, SendChunksDecoder},
+        util::SongId,
+    },
+    BYTES_PER_CHUNK_USIZE,
+};
 use ethers::types::Address;
 use ethers_providers::StreamExt;
 use futures::SinkExt;
 use tokio::net::{tcp::ReadHalf, TcpStream};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
-use crate::{
-    library::{
-        tcp::{RequestChunksEncoder, SendChunksDecoder},
-        util::SongId,
-    },
-    BYTES_PER_CHUNK_USIZE,
-};
-
-use super::TangleTunesClient;
+const CHUNKS_PER_REQUEST: usize = 20;
+const CONCURRENT_REQUESTS: usize = 3;
 
 impl TangleTunesClient {
-    pub async fn download_chunks(
+    pub async fn download_from_distributor(
         &'static self,
         ip_address: String,
         song_id: SongId,
         first_chunk_id: usize,
-        chunks_requested: usize,
+        chunk_amount: usize,
         distributor_address: Address,
     ) -> eyre::Result<Vec<u8>> {
-        let last_chunk_id = first_chunk_id + chunks_requested;
+        let last_chunk_id = first_chunk_id + chunk_amount;
 
         let mut stream = TcpStream::connect(ip_address).await?;
         let (read_stream, write_stream) = stream.split();
@@ -31,10 +32,10 @@ impl TangleTunesClient {
         let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
 
         let mut request_queue = RequestQueue::new(first_chunk_id, last_chunk_id);
-        let mut song = Vec::with_capacity(chunks_requested);
+        let mut song = Vec::with_capacity(chunk_amount);
 
         // While our song has not yet been completely downloaded..
-        while !song_is_complete(&song, chunks_requested) {
+        while !song_is_complete(&song, chunk_amount) {
             // .. send requests if necessary
             while let Some((request_id, request_size)) = request_queue.request_now(&song) {
                 println!("Requesting {request_size} chunks starting at id {request_id}");
@@ -57,9 +58,6 @@ impl TangleTunesClient {
         Ok(song)
     }
 }
-
-const CHUNKS_PER_REQUEST: usize = 20;
-const CONCURRENT_REQUESTS: usize = 3;
 
 fn song_is_complete(song: &[u8], chunks: usize) -> bool {
     song.len() > (chunks * BYTES_PER_CHUNK_USIZE) - BYTES_PER_CHUNK_USIZE

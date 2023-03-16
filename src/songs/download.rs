@@ -16,7 +16,7 @@ pub async fn run_download(
 
     let song = app
         .client
-        .download_chunks(
+        .download_from_distributor(
             ip_address,
             SongId::try_from_hex(&song_id)?,
             first_chunk_id,
