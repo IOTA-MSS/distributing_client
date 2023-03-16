@@ -3,13 +3,11 @@ use crate::library::{
     crypto::{self, Wallet},
     database::Database,
 };
-use std::{fmt::Debug, net::IpAddr, path::PathBuf};
+use std::{fmt::Debug, net::{IpAddr, SocketAddr}, path::PathBuf};
 
 #[derive(Debug)]
 pub struct AppData {
     pub password: Option<String>,
-    pub port: u16,
-    pub ip_address: IpAddr,
     pub contract_address: String,
     pub node_url: String,
     pub database_path: PathBuf,
@@ -17,17 +15,19 @@ pub struct AppData {
     pub fee: u32,
     pub database: Database,
     pub client: TangleTunesClient,
+    pub server_address: SocketAddr,
+    pub bind_address: SocketAddr
 }
 
 pub struct AppDataBuilder {
-    pub port: u16,
     pub contract_address: String,
     pub node_url: String,
     pub database_path: String,
     pub chain_id: u16,
     pub fee: u32,
-    pub ip_address: String,
     pub password: Option<String>,
+    pub server_address: SocketAddr,
+    pub bind_address: SocketAddr
 }
 
 impl AppDataBuilder {
@@ -60,9 +60,7 @@ impl AppDataBuilder {
             TangleTunesClient::initialize(wallet, &self.node_url, &self.contract_address).await?;
 
         let app = AppData {
-            ip_address: self.ip_address.parse()?,
             password: self.password,
-            port: self.port,
             contract_address: self.contract_address,
             node_url: self.node_url,
             database,
@@ -70,6 +68,8 @@ impl AppDataBuilder {
             chain_id: self.chain_id,
             fee: self.fee,
             client,
+            server_address: self.server_address,
+            bind_address: self.bind_address,
         };
 
         Ok(Box::leak(Box::new(app)))
@@ -89,12 +89,11 @@ pub mod test {
         pub async fn init_for_test(port: Option<u16>, in_memory: bool) -> eyre::Result<&'static AppData> {
             let mut builder = ConfigFile::from_path("TangleTunes.toml")
                 .wrap_err("Cannot run tests without config file at ./TangleTunes.toml")?
-                .into_app_builder(None, "TangleTunes.toml");
+                .parse_to_app_builder(None, "TangleTunes.toml")?;
 
             if let Some(port) = port {
-                builder.port = port;
+                builder.bind_address = format!("127.0.0.1:{port}").parse()?;
             }
-            builder.ip_address = "127.0.0.1".to_string();
 
             AppDataBuilder::_build(builder, in_memory).await
         }

@@ -34,13 +34,12 @@ pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
     let mut exit_signal = get_exit_signal()?;
 
     // Initialize some things
-    let address = SocketAddr::new(app.ip_address, app.port);
-    let listener = TcpListener::bind(address).await?;
+    let listener = TcpListener::bind(app.bind_address).await?;
 
     // Register our address on the server
-    println!("Registering server address on smart contract: {address}");
+    println!("Registering server address on smart contract: {}", app.server_address);
     app.client
-        .edit_server_info(address.to_string())
+        .edit_server_info(app.server_address.to_string())
         .send()
         .await?;
     sleep(Duration::from_secs(1)).await;
@@ -54,7 +53,7 @@ pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
         res = register_for_songs(&app) => { res }
     }?;
 
-    println!("Accepting connections on {address}");
+    println!("Accepting connections on {}", app.bind_address);
     match accept_connections(listener, &mut exit_signal, &app).await {
         Ok(()) => deregister_for_songs(app).await,
         Err(e) => deregister_for_songs(app).await.wrap_err(e),

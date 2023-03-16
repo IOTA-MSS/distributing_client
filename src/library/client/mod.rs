@@ -1,3 +1,5 @@
+mod download;
+
 use crate::library::util::SongId;
 
 use super::{
@@ -18,6 +20,9 @@ use std::{ops::Deref, str::FromStr, sync::Arc};
 
 pub type TTMiddleWare = NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>;
 pub type TTCall<T> = ContractCall<TTMiddleWare, T>;
+
+const GAS: usize = 1_000_000;
+const ETHER: u64 = 1_000_000_000_000_000_000;
 
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
@@ -65,7 +70,7 @@ impl TangleTunesClient {
     pub fn distribute(&self, song_id: SongId, fee: u32) -> TTCall<()> {
         self.abi_client
             .distribute(song_id.into(), fee.into())
-            .gas(1_000_000)
+            .gas(GAS)
             .gas_price(1)
             .legacy()
     }
@@ -75,7 +80,7 @@ impl TangleTunesClient {
         self.abi_client
             .edit_server_info(address)
             .legacy()
-            .gas(1_000_000)
+            .gas(GAS)
             .gas_price(1)
     }
 
@@ -83,27 +88,42 @@ impl TangleTunesClient {
         self.abi_client
             .undistribute(song_id.into())
             .legacy()
-            .gas(1_000_000)
+            .gas(GAS)
             .gas_price(1)
     }
 
-    pub async fn get_chunks_rlp(
+    pub fn get_chunks(
+        &self,
+        song_id: SongId,
+        from: usize,
+        amount: usize,
+        distributor: Address,
+    ) -> TTCall<()> {
+        self.abi_client
+            .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
+            .legacy()
+            .gas(GAS)
+            .gas_price(1)
+    }
+
+    pub async fn get_chunks_signed_rlp(
         &self,
         song_id: SongId,
         from: usize,
         amount: usize,
         distributor: Address,
     ) -> eyre::Result<Bytes> {
-        let mut tx = self
-            .abi_client
-            .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
-            .legacy()
-            .gas(1_000_000)
-            .block(BlockId::Number(BlockNumber::Pending))
-            .gas_price(1)
-            .tx;
-
-        tx.set_nonce(self.abi_client.client_ref().next());
+        let tx = {
+            let mut tx = self
+                .abi_client
+                .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
+                .legacy()
+                .tx;
+            tx.set_gas(GAS);
+            tx.set_nonce(self.abi_client.client_ref().next());
+            tx.set_gas_price(1);
+            tx
+        };
         let signature = self.wallet().sign_transaction_sync(&tx);
         Ok(tx.rlp_signed(&signature))
     }
@@ -117,6 +137,7 @@ impl TangleTunesClient {
         &'a self,
         tx: Bytes,
     ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
+        println!("Sendin raw transaction!");
         Ok(self
             .abi_client
             .deref()
@@ -131,8 +152,8 @@ impl TangleTunesClient {
         let receipt = self
             .abi_client
             .deposit()
-            .value(amount)
-            .gas(1_000_000)
+            .value(amount * ETHER)
+            .gas(GAS)
             .gas_price(1)
             .legacy()
             .send()
@@ -147,7 +168,7 @@ impl TangleTunesClient {
         let receipt = self
             .abi_client
             .withdraw(amount.into())
-            .gas(1_000_000)
+            .gas(GAS)
             .gas_price(1)
             .legacy()
             .send()
@@ -163,7 +184,7 @@ impl TangleTunesClient {
             .abi_client
             .delete_user()
             .legacy()
-            .gas(100_000)
+            .gas(GAS)
             .gas_price(1)
             .send()
             .await?
@@ -182,7 +203,7 @@ impl TangleTunesClient {
             .abi_client
             .create_user(name, description)
             .legacy()
-            .gas(100_000)
+            .gas(GAS)
             .gas_price(1)
             .send()
             .await?
@@ -198,6 +219,10 @@ impl TangleTunesClient {
 
     pub async fn nonce(&self) -> eyre::Result<U256> {
         Ok(self.abi_client.client_ref().initialize_nonce(None).await?)
+    }
+
+    fn contract_address(&self) -> Address {
+        self.abi_client.address()
     }
 
     pub(crate) fn wallet_address(&self) -> Address {
@@ -219,11 +244,9 @@ mod test {
     use futures::stream::FuturesUnordered;
     // use hex::FromHex;
 
-    use crate::{
-        library::{
-            app::AppData,
-            util::{to_hex_prefix, PendingTransactionExt},
-        },
+    use crate::library::{
+        app::AppData,
+        util::{to_hex_prefix, PendingTransactionExt},
     };
 
     #[ignore]

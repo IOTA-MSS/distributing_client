@@ -40,7 +40,7 @@ fn main() -> eyre::Result<()> {
             }
             _ => {
                 let app = ConfigFile::from_path(&args.config)?
-                    .into_app_builder(args.password, &args.config)
+                    .parse_to_app_builder(args.password, &args.config)?
                     .build()
                     .await?;
                 run_command(app, args.command).await
@@ -123,18 +123,4 @@ pub mod test {
         "tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s";
     pub const CHAIN_ID: u16 = 1074;
 
-    pub fn create_app() -> AppData {
-        AppData {
-            ip_address: todo!(),
-            password: None,
-            port: 3000,
-            contract_address: CONTRACT_ADDRESS.to_string(),
-            node_url: NODE_URL.to_string(),
-            database_path: PathBuf::from("test/database"),
-            chain_id: CHAIN_ID,
-            database: todo!(),
-            fee: 1,
-            client: todo!(),
-        }
-    }
 }

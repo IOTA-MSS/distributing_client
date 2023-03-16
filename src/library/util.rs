@@ -10,7 +10,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct SongId([u8; 32]);
 
 impl TryFrom<Vec<u8>> for SongId {
