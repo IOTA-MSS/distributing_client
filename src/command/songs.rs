@@ -1,28 +1,25 @@
-use crate::{
-    library::app::AppData,
-    library::{abi::SongInfo, util::SongId},
-    BYTES_PER_CHUNK_USIZE,
-};
-use eyre::Context;
+use crate::{library::app::AppData, library::util::SongId, BYTES_PER_CHUNK_USIZE};
+use ethers::types::{Address, H160};
 use num_integer::div_ceil;
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
-pub async fn run_remove(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
+const ZERO_ADDRESS: Address = H160([0; 20]);
+
+pub async fn remove(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
+    println!("Removing songs: {ids:?}\n");
     for id in &ids {
         if cfg.database.remove_song(&SongId::try_from_hex(id)?).await? {
-            println!("Succesfully removed song {id:?}!");
+            println!("Succesfully removed song {id:?}");
         } else {
-            println!("Song with id {id:?} does not exist");
+            println!("Song with id {id:?} does not exist, cannot be removed");
         }
     }
     Ok(())
 }
 
-pub async fn run_add(
-    paths: Vec<String>,
-    distribute: bool,
-    cfg: &'static AppData,
-) -> eyre::Result<()> {
+pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
+    println!("Adding songs: {paths:?}");
+
     for path in paths {
         let path = PathBuf::from(path);
         let Some(ext) = path.extension() else {
@@ -36,16 +33,13 @@ pub async fn run_add(
         cfg.database
             .add_song(&SongId::try_from_hex(song_id)?, &data)
             .await?;
-        println!("Succesfully added song with id {}", song_id);
+        println!("Added song with id {}", song_id);
     }
     Ok(())
 }
 
-pub async fn run_set_fee(ids: Vec<String>, fee: u32, app: &'static AppData) -> eyre::Result<()> {
-    todo!()
-}
-
 pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
+    println!("Songs stored locally:");
     for (i, song_id) in app
         .database
         .get_all_song_ids()
@@ -58,19 +52,19 @@ pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn run_download(
+pub async fn download(
     app: &'static AppData,
     song_id: String,
     to_file: Option<String>,
 ) -> eyre::Result<()> {
     let song_id = song_id.parse()?;
-
     let song_info = app.client.call_get_song_info(song_id).await?;
 
     let (distr_wallet_address, distr_socket_address) =
         app.client.call_get_rand_distributor(song_id).await?;
 
-    if distr_socket_address == "" {
+    
+    if distr_wallet_address == ZERO_ADDRESS {
         bail!("No distributor found for song {song_id}");
     }
 
@@ -101,7 +95,7 @@ pub async fn run_download(
     Ok(())
 }
 
-pub async fn run_download_direct(
+pub async fn download_direct(
     app: &'static AppData,
     socket_address: String,
     song_id: String,
@@ -117,7 +111,7 @@ pub async fn run_download_direct(
             SongId::try_from_hex(&song_id)?,
             first_chunk_id,
             chunks_requested,
-            distributor_address.parse()?, 
+            distributor_address.parse()?,
         )
         .await?;
 

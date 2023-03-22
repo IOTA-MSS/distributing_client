@@ -1,10 +1,11 @@
-use crate::{library::app::AppData, songs};
+use crate::{library::app::AppData, command};
 use rand::{seq::IteratorRandom, thread_rng};
 
-pub(crate) async fn run_update(app: &'static AppData) -> eyre::Result<()> {
+pub async fn update(app: &'static AppData) -> eyre::Result<()> {
+    println!("Updating song index...");
     let index = app.database.get_next_song_index().await?;
     let new_ids = app.client.get_song_ids_from_index(index).await?;
-    println!("Songs added to index:");
+    println!("New songs:");
     for (i, id) in &new_ids {
         println!("{i}: {id}");
     }
@@ -12,16 +13,16 @@ pub(crate) async fn run_update(app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub(crate) async fn run_reset(app: &'static AppData, update: bool) -> eyre::Result<()> {
+pub async fn reset(app: &'static AppData, to_update: bool) -> eyre::Result<()> {
     app.database.clear_song_index().await?;
     println!("Song index cleared.\n");
-    if update {
-        run_update(app).await?;
+    if to_update {
+        update(app).await?;
     }
     Ok(())
 }
 
-pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
+pub async fn list(app: &'static AppData) -> eyre::Result<()> {
     println!("Song index:");
     for (i, id) in app.database.get_song_index().await? {
         println!("{i}: {id}");
@@ -29,7 +30,7 @@ pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub(crate) async fn run_download(
+pub async fn download(
     app: &'static AppData,
     amount: Option<usize>,
     indexes: Option<Vec<usize>>,
@@ -59,9 +60,10 @@ pub(crate) async fn run_download(
         }
     };
 
+    println!("Songs to be downloaded: {indexes:?}\n");
     for (index, id) in indexes {
         println!("\nDownloading song {index}: {id}:");
-        if let Err(e) = songs::run_download(app, id.to_string(), None).await {
+        if let Err(e) = command::songs::download(app, id.to_string(), None).await {
             println!("Could not download song: {e}")
         }
     }

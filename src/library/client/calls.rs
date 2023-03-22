@@ -1,4 +1,4 @@
-use super::{TTCall, TTMiddleWare, TangleTunesClient};
+use super::{TTCall, TTMiddleWare, TangleTunesClient, WEI_PER_IOTA};
 use crate::library::{
     abi::SongInfo,
     util::{SongId, TTCallExt},
@@ -73,5 +73,38 @@ impl TangleTunesClient {
 
     pub fn undistribute_call(&self, song_id: SongId) -> TTCall<()> {
         self.abi_client.undistribute(song_id.into()).set_defaults()
+    }
+
+    pub fn deposit_call(&self, iota: u128) -> TTCall<()> {
+        self
+            .abi_client
+            .deposit()
+            .value(iota * WEI_PER_IOTA)
+            .set_defaults()
+    }
+
+    pub fn withdraw_call(&self, iota: u128) -> TTCall<()> {
+        self
+            .abi_client
+            .withdraw((iota * WEI_PER_IOTA).into())
+            .set_defaults()
+    }
+
+    pub fn delete_user_call(&self) -> TTCall<()> {
+        self
+            .abi_client
+            .delete_user()
+            .set_defaults()
+    }
+
+    pub fn create_user_call(
+        &self,
+        name: String,
+        description: String,
+    ) -> TTCall<()> {
+        self
+            .abi_client
+            .create_user(name, description)
+            .set_defaults()
     }
 }

@@ -1,11 +1,13 @@
-#[derive(clap::Parser, Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(clap::Parser, Debug, Clone, Serialize, Deserialize)]
 #[command(
     name = "TangleTunes distribution client",
     author = "The TangleTunes foundation",
     version = "0.0.1-beta.0",
     about = "A distribution client for TangleTunes"
 )]
-pub struct Args {
+pub struct Arguments {
     /// The path to the configuration file
     #[arg(short, long, default_value = "./TangleTunes.toml", global = true)]
     pub config: String,
@@ -18,7 +20,7 @@ pub struct Args {
     pub command: Command,
 }
 
-#[derive(clap::Subcommand, Debug, Clone)]
+#[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum Command {
     /// Manage your IOTA wallet
     #[command(subcommand)]
@@ -37,10 +39,14 @@ pub enum Command {
     SongIndex(SongIndexCommand),
 
     /// Start distributing.
-    Distribute,
+    Distribute {
+        /// Automatically download and distribute songs from other distributors
+        #[arg(long)]
+        auto_distribute: bool
+    },
 }
 
-#[derive(clap::Subcommand, Debug, Clone)]
+#[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum WalletCommand {
     /// Import a wallet with the given private key
     Import {
@@ -81,7 +87,7 @@ pub enum WalletCommand {
     },
 }
 
-#[derive(clap::Subcommand, Debug, Clone)]
+#[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum AccountCommand {
     /// Deposit into your account from your wallet
     Deposit {
@@ -110,7 +116,7 @@ pub enum AccountCommand {
     Delete,
 }
 
-#[derive(clap::Subcommand, Debug, Clone)]
+#[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum SongIndexCommand {
     /// Update the list of songs from the smart-contract
     Update,
@@ -136,7 +142,7 @@ pub enum SongIndexCommand {
     }
 }
 
-#[derive(clap::Subcommand, Debug, Clone)]
+#[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
 pub enum SongsCommand {
     /// Download chunks from a distributor's ip-address
     DownloadDirect {
@@ -190,16 +196,6 @@ pub enum SongsCommand {
     Remove {
         /// The songs to selected
         ids: Vec<String>,
-    },
-
-    /// Set the distribution-fee for a given song
-    SetFee {
-        /// The songs to selected
-        ids: Vec<String>,
-
-        /// The distribution-fee for the given songs
-        #[arg(long, short)]
-        fee: u32,
     },
 
     /// List all songs in the database

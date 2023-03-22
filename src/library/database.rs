@@ -1,6 +1,8 @@
+use crate::arguments::Arguments;
 use crate::library::util::SongId;
 use crate::BYTES_PER_CHUNK;
 use chrono::{DateTime, Local, Utc};
+use ethers::utils::serialize;
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
 use sqlx::pool::PoolConnection;
@@ -188,15 +190,15 @@ impl Database {
         Ok(row)
     }
 
-    pub async fn get_new_songs(&self, duration: &Duration) -> eyre::Result<Vec<SongId>> {
-        let date_time = (Utc::now() - chrono::Duration::from_std(*duration)?)
+    pub async fn get_new_songs(&self, since: &DateTime<Utc>) -> eyre::Result<Vec<SongId>> {
+        let date_time = since
             .format("%Y-%m-%d %H:%M:%S")
             .to_string();
 
         let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
             SELECT id FROM songs
-            WHERE inserted_at > ?1;
+            WHERE inserted_at >= ?1;
             ",
         )
         .bind(date_time)
@@ -278,6 +280,17 @@ impl Database {
         .await?;
 
         Ok(row.0)
+    }
+
+    pub async fn remove_private_key(&self) -> eyre::Result<()> {
+        sqlx::query(
+            "
+            DELETE FROM key;
+            ",
+        )
+        .execute(&mut self.acquire().await?)
+        .await?;
+        Ok(())
     }
 }
 

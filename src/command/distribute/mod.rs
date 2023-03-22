@@ -1,9 +1,9 @@
-mod background;
+mod background_tasks;
 mod register;
 
 use crate::{
-    distribute::{
-        background::{auto_distribute_added_songs, auto_download_new_songs, exit_listener},
+    command::distribute::{
+        background_tasks::{auto_distribute, exit_listener},
         register::{deregister_for_songs, register_for_songs},
     },
     library::{
@@ -16,18 +16,17 @@ use crate::{
 };
 use ethers::types::Bytes;
 use ethers_providers::StreamExt;
-use futures::SinkExt;
-use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, time::Duration};
+use futures::{future::pending, SinkExt};
+use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, pin, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
-    spawn,
     time::sleep,
 };
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const DEBT_LIMIT: u32 = 10;
 
-pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
+pub async fn run_distribute(app: &'static AppData, auto_distribute: bool) -> eyre::Result<()> {
     let mut exit_listener = exit_listener()?;
 
     // Bind the address
@@ -51,9 +50,8 @@ pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
     println!("Registering for all songs in database..");
     let result = match register_for_songs(&app).await {
         Ok(()) => {
-            // Spawn background tasks
-            let mut auto_distribute_task = spawn(auto_distribute_added_songs(app));
-            let mut auto_download_task = spawn(auto_download_new_songs(app));
+            // let auto_distributor =
+            //     auto_distribute.then(|| );
 
             tokio::select! {
                 // The ctrl-c exit-handler
@@ -62,21 +60,14 @@ pub async fn run_distribute(app: &'static AppData) -> eyre::Result<()> {
                 }
 
                 // The auto-distribute task
-                res = &mut auto_distribute_task => {
-                    match res {
-                        Ok(Err(e)) => Err(e),
-                        Err(e) => Err(e.into()),
-                        Ok(Ok(_)) => unreachable!()
+                res = async {
+                    if auto_distribute {
+                        tokio::task::spawn(self::auto_distribute(app)).await
+                    } else {
+                        pending().await
                     }
-                }
-
-                // The auto-distribute task
-                res = &mut auto_download_task => {
-                    match res {
-                        Ok(Err(e)) => Err(e),
-                        Err(e) => Err(e.into()),
-                        Ok(Ok(_)) => unreachable!()
-                    }
+                } => {
+                    Err(res.unwrap_err().into())
                 }
 
                 // The main process that handles incoming connections

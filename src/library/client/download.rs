@@ -1,5 +1,6 @@
 use crate::{
     library::{
+        app::AppData,
         client::TangleTunesClient,
         tcp::{RequestChunksEncoder, SendChunksDecoder},
         util::SongId,
@@ -27,7 +28,9 @@ impl TangleTunesClient {
         first_chunk_id: usize,
     ) -> eyre::Result<bool> {
         let chunks = div_ceil(song_data.len(), BYTES_PER_CHUNK_USIZE);
-        let contract_hashes = self.call_check_chunks(song_id, first_chunk_id, chunks).await?;
+        let contract_hashes = self
+            .call_check_chunks(song_id, first_chunk_id, chunks)
+            .await?;
         let calculated_hashes = song_data
             .chunks(BYTES_PER_CHUNK_USIZE)
             .map(keccak256)
@@ -80,7 +83,8 @@ impl TangleTunesClient {
             }
 
             // And then read the next response
-            add_next_to_buffer(&mut read_stream, &mut song).await?
+            self.write_next_chunks_to_buffer(&mut read_stream, &mut song, &song_id)
+                .await?
         }
 
         if self
@@ -93,34 +97,43 @@ impl TangleTunesClient {
             Err(eyre!("Song verification failed"))
         }
     }
+
+    /// Reads the next chunk from the stream and adds them to the buffer.
+    async fn write_next_chunks_to_buffer(
+        &self,
+        read_stream: &mut (impl Stream<Item = eyre::Result<(u32, BytesMut)>> + Unpin),
+        buffer: &mut Vec<u8>,
+        song_id: &SongId,
+    ) -> eyre::Result<()> {
+        let init_len = buffer.len();
+        let result = read_stream.next().await.ok_or(eyre!(
+            "Distributor closed stream before all data was received"
+        ))?;
+        let (start_chunk_id, chunks) = result?;
+        println!(
+            "Received {} bytes starting at id {start_chunk_id}",
+            chunks.len()
+        );
+        for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
+            assert_eq!(
+                chunk_id as usize,
+                (buffer.len() + start_chunk_id as usize) / BYTES_PER_CHUNK_USIZE
+            );
+            buffer.extend(chunk);
+        }
+        self.verify_chunks_against_smart_contract(
+            *song_id,
+            &buffer[init_len..],
+            start_chunk_id as usize,
+        )
+        .await?;
+        Ok(())
+    }
 }
 
 /// Whether the song is completely downloaded, given the amount of chunks that it should contain.
 fn song_is_complete(song: &[u8], chunks: usize) -> bool {
     song.len() + BYTES_PER_CHUNK_USIZE > (chunks * BYTES_PER_CHUNK_USIZE)
-}
-
-/// Reads the next chunk from the stream and adds them to the buffer.
-async fn add_next_to_buffer(
-    read_stream: &mut (impl Stream<Item = eyre::Result<(u32, BytesMut)>> + Unpin),
-    buffer: &mut Vec<u8>,
-) -> eyre::Result<()> {
-    let result = read_stream.next().await.ok_or(eyre!(
-        "Distributor closed stream before all data was received"
-    ))?;
-    let (start_chunk_id, chunks) = result?;
-    println!(
-        "Received {} bytes starting at id {start_chunk_id}",
-        chunks.len()
-    );
-    for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
-        assert_eq!(
-            chunk_id as usize,
-            (buffer.len() + start_chunk_id as usize) / BYTES_PER_CHUNK_USIZE
-        );
-        buffer.extend(chunk);
-    }
-    Ok(())
 }
 
 //------------------------------------------------------------------------------------------------

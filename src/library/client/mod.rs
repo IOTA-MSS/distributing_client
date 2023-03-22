@@ -7,14 +7,14 @@ const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
-    util::{TTCallExt, TransactionReceiptExt},
+    util::TTCallExt,
 };
 use crate::library::util::SongId;
 use ethers::{
     abi::AbiDecode,
     prelude::*,
     signers::LocalWallet,
-    types::{transaction::eip2718::TypedTransaction, Address, TransactionReceipt},
+    types::{transaction::eip2718::TypedTransaction, Address},
     utils::rlp::{Decodable, Rlp},
 };
 use ethers_core::k256::ecdsa::SigningKey;
@@ -125,67 +125,6 @@ impl TangleTunesClient {
             .inner()
             .send_raw_transaction(tx)
             .await?)
-    }
-
-    pub async fn deposit(&self, iota: u128) -> eyre::Result<TransactionReceipt> {
-        let receipt = self
-            .abi_client
-            .deposit()
-            .value(iota * WEI_PER_IOTA)
-            .set_defaults()
-            .send()
-            .await?
-            .await?
-            .unwrap()
-            .status_is_ok("Could not register deposit")?;
-        Ok(receipt)
-    }
-
-    pub async fn withdraw(&self, iota: u128) -> eyre::Result<TransactionReceipt> {
-        let receipt = self
-            .abi_client
-            .withdraw((iota * WEI_PER_IOTA).into())
-            .set_defaults()
-            .send()
-            .await?
-            .await?
-            .unwrap()
-            .status_is_ok("Could not register withdraw")?;
-        Ok(receipt)
-    }
-
-    pub async fn delete_user(&self) -> eyre::Result<TransactionReceipt> {
-        let receipt = self
-            .abi_client
-            .delete_user()
-            .set_defaults()
-            .send()
-            .await?
-            .await?
-            .unwrap()
-            .status_is_ok("Could not register delete user")?;
-        Ok(receipt)
-    }
-
-    pub async fn create_user(
-        &self,
-        name: String,
-        description: String,
-    ) -> eyre::Result<TransactionReceipt> {
-        let receipt = self
-            .abi_client
-            .create_user(name, description)
-            .set_defaults()
-            .send()
-            .await?
-            .await?
-            .unwrap();
-
-        if receipt.status.unwrap() != 1.into() {
-            bail!("Transaction status 0: {receipt:?}")
-        }
-
-        Ok(receipt)
     }
 
     pub async fn get_nonce(&self) -> eyre::Result<U256> {

@@ -1,31 +1,32 @@
 use crate::library::{app::AppData, crypto::Wallet, database::Database, util::to_hex_prefix};
 use std::io::stdin;
 
-pub async fn run_generate(password: Option<String>, database: Database) -> eyre::Result<()> {
+pub async fn generate(password: Option<String>, database: Database) -> eyre::Result<()> {
     let key = Wallet::generate(1074).private_key();
     set_key_with_confirmation(&database, key, password).await?;
     Ok(())
 }
 
-pub async fn run_import(password: Option<String>, key: String, database: Database) -> eyre::Result<()> {
+pub async fn import(password: Option<String>, key: String, database: Database) -> eyre::Result<()> {
     set_key_with_confirmation(&database, key, password).await?;
-
     Ok(())
 }
 
-pub async fn run_remove(app: &'static AppData) -> eyre::Result<()> {
-    todo!()
+pub async fn remove(app: &'static AppData) -> eyre::Result<()> {
+    if ask_confirmation(
+        "Are you sure? This will delete the private key. Make sure it is backed up!",
+    )? {
+        app.database.remove_private_key().await?;
+    }
+    Ok(())
 }
 
-
-
-pub async fn run_export_address(app: &'static AppData) -> eyre::Result<()> {
+pub async fn export_address(app: &'static AppData) -> eyre::Result<()> {
     println!("Your address: {:?}", app.client.wallet_address());
-
     Ok(())
 }
 
-pub async fn run_export_private_key(app: &'static AppData) -> eyre::Result<()> {
+pub async fn export_private_key(app: &'static AppData) -> eyre::Result<()> {
     println!(
         "Your private key: {:?}",
         to_hex_prefix(app.client.wallet_private_key().to_bytes())

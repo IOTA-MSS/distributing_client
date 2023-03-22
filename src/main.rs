@@ -1,4 +1,6 @@
-use args::{AccountCommand, Args, Command, SongsCommand, WalletCommand, SongIndexCommand};
+use arguments::{
+    AccountCommand, Arguments, Command, SongIndexCommand, SongsCommand, WalletCommand,
+};
 use clap::Parser;
 use config::ConfigFile;
 use library::{app::AppData, crypto, database::Database};
@@ -8,19 +10,16 @@ extern crate eyre;
 #[macro_use]
 extern crate tracing;
 
-mod account;
-mod args;
+mod arguments;
 mod config;
-mod distribute;
 mod library;
-mod songs;
-mod wallet;
-mod song_index;
+
+pub mod command;
 
 fn main() -> eyre::Result<()> {
     Runtime::new().unwrap().block_on(async move {
         color_eyre::install().unwrap();
-        let args = Args::parse();
+        let args = Arguments::parse();
         let config = ConfigFile::from_path(&args.config)?;
 
         match &args.command {
@@ -30,14 +29,14 @@ fn main() -> eyre::Result<()> {
                 password,
             }) => {
                 let database = Database::initialize(&config.database_path).await?;
-                crate::wallet::run_import(password.to_owned(), key.to_owned(), database).await
+                command::wallet::import(password.to_owned(), key.to_owned(), database).await
             }
             Command::Wallet(WalletCommand::Generate {
                 plaintext: _,
                 password,
             }) => {
                 let database = Database::initialize(&config.database_path).await?;
-                crate::wallet::run_generate(password.to_owned(), database).await
+                command::wallet::generate(password.to_owned(), database).await
             }
             _ => {
                 let app = ConfigFile::from_path(&args.config)?
@@ -53,20 +52,12 @@ fn main() -> eyre::Result<()> {
 async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()> {
     match command {
         Command::Wallet(command) => match command {
-            WalletCommand::Import {
-                key: _,
-                plaintext: _,
-                password: _,
-            } => unreachable!(),
-            WalletCommand::Remove => crate::wallet::run_remove(app).await,
-            WalletCommand::Address => crate::wallet::run_export_address(app).await,
+            WalletCommand::Remove => command::wallet::remove(app).await,
+            WalletCommand::Address => command::wallet::export_address(app).await,
             WalletCommand::PrivateKey { plaintext: _ } => {
-                crate::wallet::run_export_private_key(app).await
+                command::wallet::export_private_key(app).await
             }
-            WalletCommand::Generate {
-                plaintext: _,
-                password,
-            } => unreachable!(),
+            WalletCommand::Import { .. } | WalletCommand::Generate { .. } => unreachable!(),
         },
         Command::Songs(command) => match command {
             SongsCommand::DownloadDirect {
@@ -77,7 +68,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 chunks,
                 distributor_address,
             } => {
-                crate::songs::run_download_direct(
+                command::songs::download_direct(
                     app,
                     ip,
                     song,
@@ -88,28 +79,32 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 )
                 .await
             }
-            SongsCommand::Add { paths } => crate::songs::run_add(paths, false, app).await,
-            SongsCommand::Remove { ids } => crate::songs::run_remove(ids, app).await,
-            SongsCommand::SetFee { ids, fee } => crate::songs::run_set_fee(ids, fee, app).await,
-            SongsCommand::List => crate::songs::run_list(app).await,
+            SongsCommand::Add { paths } => command::songs::add(paths, app).await,
+            SongsCommand::Remove { ids } => command::songs::remove(ids, app).await,
+            SongsCommand::List => command::songs::run_list(app).await,
             SongsCommand::Download { song_id, to_file } => {
-                crate::songs::run_download(app, song_id, to_file).await
+                command::songs::download(app, song_id, to_file).await
             }
         },
         Command::Account(command) => match command {
-            AccountCommand::Deposit { amount } => crate::account::run_deposit(amount, app).await,
-            AccountCommand::Withdraw { amount } => crate::account::run_withdraw(amount, app).await,
+            AccountCommand::Deposit { amount } => command::account::deposit(amount, app).await,
+            AccountCommand::Withdraw { amount } => command::account::withdraw(amount, app).await,
             AccountCommand::Create { name, description } => {
-                crate::account::run_create(name, description, app).await
+                command::account::create(name, description, app).await
             }
-            AccountCommand::Delete => crate::account::run_delete(app).await,
+            AccountCommand::Delete => command::account::delete(app).await,
         },
-        Command::Distribute => crate::distribute::run_distribute(app).await,
+        Command::Distribute { auto_distribute } => command::distribute::run_distribute(app, auto_distribute).await,
         Command::SongIndex(command) => match command {
-            SongIndexCommand::Update => crate::song_index::run_update(app).await,
-            SongIndexCommand::Reset { no_update } => crate::song_index::run_reset(app, !no_update).await,
-            SongIndexCommand::List => crate::song_index::run_list(app).await,
-            SongIndexCommand::Download { amount, index: indexes } => crate::song_index::run_download(app, amount, indexes).await,
+            SongIndexCommand::Update => command::song_index::update(app).await,
+            SongIndexCommand::Reset { no_update } => {
+                command::song_index::reset(app, !no_update).await
+            }
+            SongIndexCommand::List => command::song_index::list(app).await,
+            SongIndexCommand::Download {
+                amount,
+                index: indexes,
+            } => command::song_index::download(app, amount, indexes).await,
         },
     }
 }
