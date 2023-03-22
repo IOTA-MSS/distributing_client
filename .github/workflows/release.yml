@@ -10,7 +10,7 @@ on:
 
 jobs:
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
       - uses: taiki-e/create-gh-release-action@v1
@@ -22,9 +22,9 @@ jobs:
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-20.04
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-20.04
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
