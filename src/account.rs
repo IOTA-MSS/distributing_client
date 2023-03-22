@@ -21,13 +21,13 @@ pub async fn run_delete(app: &'static AppData) -> eyre::Result<()> {
 }
 
 pub async fn run_deposit(amount: u64, app: &'static AppData) -> eyre::Result<()> {
-    app.client.deposit(amount).await?;
+    app.client.deposit(amount as u128).await?;
     println!("Succesfully deposited to the smart contract!");
     Ok(())
 }
 
-pub async fn run_withdraw(amount: u64, app: &'static AppData) -> eyre::Result<()> {
-    app.client.withdraw(amount).await?;
+pub async fn run_withdraw(iota: u64, app: &'static AppData) -> eyre::Result<()> {
+    app.client.withdraw(iota as u128).await?;
     println!("Succesfully withdrew from the smart contract!");
     Ok(())
 }

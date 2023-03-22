@@ -3,7 +3,7 @@ use crate::library::{
     crypto::{self, Wallet},
     database::Database,
 };
-use std::{fmt::Debug, net::{IpAddr, SocketAddr}, path::PathBuf};
+use std::{fmt::Debug, net::SocketAddr, path::PathBuf};
 
 #[derive(Debug)]
 pub struct AppData {
@@ -16,7 +16,23 @@ pub struct AppData {
     pub database: Database,
     pub client: TangleTunesClient,
     pub server_address: SocketAddr,
-    pub bind_address: SocketAddr
+    pub bind_address: SocketAddr,
+}
+
+impl AppData {
+    /// Updates the internal song-list with data from the smart contract.
+    pub async fn update_song_list(&self) -> eyre::Result<()> {
+        let index = self.database.get_next_song_index().await?;
+        let new_ids = self.client.get_song_ids_from_index(index).await?;
+        self.database.add_to_song_index(&new_ids).await?;
+        Ok(())
+    }
+
+    pub async fn reset_song_list(&self) -> eyre::Result<()> {
+        self.database.clear_song_index().await?;
+        self.update_song_list().await?;
+        Ok(())
+    }
 }
 
 pub struct AppDataBuilder {
@@ -27,7 +43,7 @@ pub struct AppDataBuilder {
     pub fee: u32,
     pub password: Option<String>,
     pub server_address: SocketAddr,
-    pub bind_address: SocketAddr
+    pub bind_address: SocketAddr,
 }
 
 impl AppDataBuilder {
@@ -86,7 +102,10 @@ pub mod test {
         /// Overrides:
         /// - database_path to ":memory:" (in memory database)
         /// - ip_address to "127.0.0.1"
-        pub async fn init_for_test(port: Option<u16>, in_memory: bool) -> eyre::Result<&'static AppData> {
+        pub async fn init_for_test(
+            port: Option<u16>,
+            in_memory: bool,
+        ) -> eyre::Result<&'static AppData> {
             let mut builder = ConfigFile::from_path("TangleTunes.toml")
                 .wrap_err("Cannot run tests without config file at ./TangleTunes.toml")?
                 .parse_to_app_builder(None, "TangleTunes.toml")?;

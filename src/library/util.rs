@@ -1,5 +1,7 @@
-use super::client::TangleTunesClient;
+use super::client::{TTCall, TangleTunesClient};
+use color_eyre::Report;
 use ethers::{
+    abi::Detokenize,
     types::TransactionReceipt,
     utils::hex::{FromHex, ToHex},
 };
@@ -8,9 +10,10 @@ use std::{
     error::Error,
     fmt::{Debug, Display},
     ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub struct SongId([u8; 32]);
 
 impl TryFrom<Vec<u8>> for SongId {
@@ -71,6 +74,14 @@ impl SongId {
     }
 }
 
+impl FromStr for SongId {
+    type Err = Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from_hex(s)
+    }
+}
+
 pub fn to_hex_prefix(bytes: impl AsRef<[u8]>) -> String {
     format!("0x{}", ToHex::encode_hex::<String>(&bytes))
 }
@@ -109,7 +120,10 @@ impl TransactionReceiptExt for TransactionReceipt {
             .ok_or_else(|| eyre!("Transaction without status: {self:?}"))?;
 
         if status != 1.into() {
-            Err(eyre!("Transaction failed: status = 0, tx-hash = {:?}, {msg}.", self.transaction_hash))
+            Err(eyre!(
+                "Transaction failed: status = 0, tx-hash = {:?}, {msg}.",
+                self.transaction_hash
+            ))
         } else {
             Ok(self)
         }
@@ -126,82 +140,20 @@ pub trait PendingTransactionExt: Sized {
 
 impl<'a> PendingTransactionExt for PendingTransaction<'a, Http> {
     fn with_client<'b>(self, client: &'b TangleTunesClient) -> PendingTransaction<'b, Http> {
-        client.pending_tx(self.tx_hash(), 1)
+        client.create_pending_tx(self.tx_hash(), 1)
     }
 }
 
-// pub struct TransactionPool {
-//     client: &'static TangleTunesClient,
-//     broadcasting: VecDeque<BroadcastTx>,
-//     delay: Option<Pin<Box<Sleep>>>,
-//     pending: FuturesUnordered<PendingTransaction<'static, Http>>,
-// }
+//------------------------------------------------------------------------------------------------
+//  CallExt
+//------------------------------------------------------------------------------------------------
 
-// struct BroadcastTx {
-//     retries: u32,
-//     call: TTCall<()>,
-//     future: BoxFuture<'static, eyre::Result<H256>>,
-// }
+pub trait TTCallExt<T>: Sized {
+    fn set_defaults(self) -> Self;
+}
 
-// impl Unpin for TransactionPool {}
-
-// impl Stream for TransactionPool {
-//     type Item = eyre::Result<TransactionReceipt>;
-
-//     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-//         let this = &mut *self;
-
-//         let poll_broadcast = match &mut this.delay {
-//             Some(delay) => {
-//                 if let Poll::Ready(()) = delay.poll_unpin(cx) {
-//                     this.delay.take().unwrap();
-//                     true
-//                 } else {
-//                     false
-//                 }
-//             }
-//             None => true,
-//         };
-
-//         if poll_broadcast {
-//             if let Some(tx) = this.broadcasting.front_mut() {
-//                 if let Poll::Ready(result) = tx.future.poll_unpin(cx) {
-//                     match result {
-//                         Ok(hash) => {
-//                             this.broadcasting.pop_front();
-//                             let pending_tx = this.client.pending_tx(hash, 1);
-//                             this.pending.push(pending_tx);
-//                         }
-//                         Err(e) => {
-//                             if tx.retries == 0 {
-//                                 return Poll::Ready(Some(Err(e.into())));
-//                             }
-//                             tx.retries -= 1;
-//                             let call = tx.call.clone();
-//                             let new_future = Box::pin(async {
-//                                 this.client
-//                                     .abi_client
-//                                     .client_ref()
-//                                     .send_transaction(tx.call.tx, None);
-//                                 let future = call.send();
-//                                 Ok(future.await?.tx_hash())
-//                             });
-//                             tx.future = new_future;
-//                             todo!()
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-
-//         for tx in &mut this.pending {
-//             if let Poll::Ready(res) = tx.poll_unpin(cx) {
-//                 match res {
-//                     Ok(_) => todo!(),
-//                     Err(_) => todo!(),
-//                 }
-//             }
-//         }
-//         todo!()
-//     }
-// }
+impl<T: Detokenize> TTCallExt<T> for TTCall<T> {
+    fn set_defaults(self) -> Self {
+        self.legacy().gas(1_000_000).gas_price(1)
+    }
+}

@@ -1,11 +1,14 @@
 use crate::library::util::SongId;
 use crate::BYTES_PER_CHUNK;
+use chrono::{DateTime, Local, Utc};
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, Sqlite};
+use std::fmt::Debug;
 use std::path::Path;
+use std::time::Duration;
 
 static DATABASE_POOL: OnceCell<Pool<Sqlite>> = OnceCell::new();
 #[derive(Debug, Clone, Copy)]
@@ -30,14 +33,14 @@ impl Database {
         let database = Self {
             pool: DATABASE_POOL.get_or_try_init(|| block_on(Self::new_pool(path, 5)))?,
         };
-        database.create_tables().await?;
+        database.migrate_db().await?;
         Ok(database)
     }
 
     pub async fn initialize_in_memory() -> eyre::Result<Self> {
         let pool = Box::leak(Box::new(Self::new_pool(":memory:", 1).await?));
         let database = Self { pool };
-        database.create_tables().await?;
+        database.migrate_db().await?;
         Ok(database)
     }
 
@@ -47,16 +50,22 @@ impl Database {
     }
 
     /// Creates all tables if they do not yet exist
-    pub async fn create_tables(&self) -> eyre::Result<()> {
+    pub async fn migrate_db(&self) -> eyre::Result<()> {
         sqlx::query(
             "
             CREATE TABLE IF NOT EXISTS songs (
-                id BLOB NOT NULL UNIQUE,
-                data BLOB NOT NULL
+                id BLOB PRIMARY KEY,
+                data BLOB NOT NULL,
+                inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
             );
     
+            CREATE TABLE IF NOT EXISTS song_list (
+                idx INT PRIMARY KEY,
+                id BLOB NOT NULL UNIQUE
+            );
+
             CREATE TABLE IF NOT EXISTS key (
-                key TEXT,
+                key TEXT PRIMARY KEY,
                 encrypted BOOL
             );
             ",
@@ -64,6 +73,88 @@ impl Database {
         .execute(&mut self.acquire().await?)
         .await?;
 
+        Ok(())
+    }
+
+    pub async fn get_song_index(&self) -> eyre::Result<Vec<(usize, SongId)>> {
+        Ok(sqlx::query_as::<_, (u32, Vec<u8>)>(
+            "
+            SELECT idx, id from song_list;
+            ",
+        )
+        .fetch_all(&mut self.acquire().await?)
+        .await?
+        .into_iter()
+        .map(|(i, id)| (i as usize, id.try_into().unwrap()))
+        .collect())
+    }
+
+    pub async fn add_to_song_index(&self, ids: &[(usize, SongId)]) -> eyre::Result<()> {
+        let mut conn = self.acquire().await?;
+        for (index, id) in ids {
+            if *index > 0 {
+                // Check that previous one exists
+                let prev_index = sqlx::query_as::<_, (u32,)>(
+                    "
+                    SELECT (idx) from song_list WHERE idx = ?1;
+                    ",
+                )
+                .bind((index - 1) as u32)
+                .fetch_optional(&mut conn)
+                .await?;
+                if prev_index.is_none() {
+                    panic!("Cannot add song-index if prev one doesn't exist")
+                }
+            }
+
+            sqlx::query(
+                "
+                INSERT INTO song_list (idx, id) VALUES (?1, ?2);
+                ",
+            )
+            .bind(*index as i64)
+            .bind(id.as_ref())
+            .execute(&mut conn)
+            .await?;
+        }
+        Ok(())
+    }
+
+    /// Get the last song-index stored in the databases
+    pub async fn get_next_song_index(&self) -> eyre::Result<usize> {
+        let val = sqlx::query_as::<_, (u32,)>(
+            "
+            SELECT count(*) FROM song_list;
+            ",
+        )
+        .fetch_one(&mut self.acquire().await?)
+        .await?
+        .0;
+
+        Ok(val as usize)
+    }
+
+    pub async fn get_song_id_by_index(&self, index: usize) -> eyre::Result<Option<SongId>> {
+        let row = sqlx::query_as::<_, (Vec<u8>,)>(
+            "
+            SELECT id FROM song_list WHERE idx = ?1;
+            ",
+        )
+        .bind(index as u32)
+        .fetch_optional(&mut self.acquire().await?)
+        .await?;
+
+        Ok(row.map(|id| id.0.try_into().unwrap()))
+    }
+
+    pub async fn clear_song_index(&self) -> eyre::Result<()> {
+        sqlx::query(
+            "
+            DELETE FROM song_list;
+            ",
+        )
+        .execute(&mut self.acquire().await?)
+        .await?;
         Ok(())
     }
 
@@ -97,6 +188,27 @@ impl Database {
         Ok(row)
     }
 
+    pub async fn get_new_songs(&self, duration: &Duration) -> eyre::Result<Vec<SongId>> {
+        let date_time = (Utc::now() - chrono::Duration::from_std(*duration)?)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+
+        let row = sqlx::query_as::<_, (Vec<u8>,)>(
+            "
+            SELECT id FROM songs
+            WHERE inserted_at > ?1;
+            ",
+        )
+        .bind(date_time)
+        .fetch_all(&mut self.acquire().await?)
+        .await?
+        .into_iter()
+        .map(|e| SongId::try_from(e.0).unwrap())
+        .collect();
+
+        Ok(row)
+    }
+
     /// Add a song to the database
     pub async fn add_song(&self, id: &SongId, song_data: &[u8]) -> eyre::Result<()> {
         sqlx::query(
@@ -112,16 +224,16 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_song_ids(&self) -> eyre::Result<Vec<SongId>> {
+    pub async fn get_all_song_ids(&self) -> eyre::Result<Vec<SongId>> {
         let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
-            SELECT id FROM songs
+            SELECT id FROM songs;
             ",
         )
         .fetch_all(&mut self.acquire().await?)
         .await?
         .into_iter()
-        .map(|(id, )| id.try_into().unwrap())
+        .map(|(id,)| id.try_into().unwrap())
         .collect();
 
         Ok(row)
@@ -244,30 +356,45 @@ mod test {
     }
 
     #[tokio::test]
+    async fn song_index() -> eyre::Result<()> {
+        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+        let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
+        let db = Database::initialize_in_memory().await?;
+
+        assert_eq!(db.get_next_song_index().await?, 0);
+        db.add_to_song_index(&[(0, unvalidated_song_id)]).await?;
+        assert_eq!(db.get_next_song_index().await?, 1);
+        db.add_to_song_index(&[(1, validated_song_id)]).await?;
+        assert_eq!(db.get_next_song_index().await?, 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn song_metadata() -> eyre::Result<()> {
         let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
         let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.get_song_ids().await?.len(), 0);
+        assert_eq!(db.get_all_song_ids().await?.len(), 0);
 
         let song_data = std::fs::read(
             "mp3/0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf.mp3",
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_song_ids().await?.len(), 1);
+        assert_eq!(db.get_all_song_ids().await?.len(), 1);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
         db.add_song(&validated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_song_ids().await?.len(), 2);
+        assert_eq!(db.get_all_song_ids().await?.len(), 2);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
 
-        assert_eq!(db.get_song_ids().await?.len(), 1);
+        assert_eq!(db.get_all_song_ids().await?.len(), 1);
 
         Ok(())
     }

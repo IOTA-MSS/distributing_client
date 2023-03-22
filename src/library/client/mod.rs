@@ -1,12 +1,15 @@
+mod calls;
 mod download;
 
-use crate::library::util::SongId;
+const GAS: usize = 1_000_000;
+const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
-    util::TransactionReceiptExt,
+    util::{TTCallExt, TransactionReceiptExt},
 };
+use crate::library::util::SongId;
 use ethers::{
     abi::AbiDecode,
     prelude::*,
@@ -21,9 +24,6 @@ use std::{ops::Deref, str::FromStr, sync::Arc};
 pub type TTMiddleWare = NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>;
 pub type TTCall<T> = ContractCall<TTMiddleWare, T>;
 
-const GAS: usize = 1_000_000;
-const ETHER: u64 = 1_000_000_000_000_000_000;
-
 /// The client used to connect to the IOTA network.
 #[derive(Debug)]
 pub struct TangleTunesClient {
@@ -32,7 +32,7 @@ pub struct TangleTunesClient {
 }
 
 impl TangleTunesClient {
-    pub fn pending_tx(
+    pub fn create_pending_tx(
         &self,
         hash: impl Into<TxHash>,
         confirmations: usize,
@@ -67,46 +67,26 @@ impl TangleTunesClient {
         Ok(contract)
     }
 
-    pub fn distribute(&self, song_id: SongId, fee: u32) -> TTCall<()> {
-        self.abi_client
-            .distribute(song_id.into(), fee.into())
-            .gas(GAS)
-            .gas_price(1)
-            .legacy()
-    }
-
-    pub fn edit_server_info(&self, address: String) -> TTCall<()> {
-        println!("EDIT_SERVER_INFO: {address}");
-        self.abi_client
-            .edit_server_info(address)
-            .legacy()
-            .gas(GAS)
-            .gas_price(1)
-    }
-
-    pub fn undistribute(&self, song_id: SongId) -> TTCall<()> {
-        self.abi_client
-            .undistribute(song_id.into())
-            .legacy()
-            .gas(GAS)
-            .gas_price(1)
-    }
-
-    pub fn get_chunks(
+    /// Get the song metadata from the given index (inclusive)
+    pub async fn get_song_ids_from_index(
         &self,
-        song_id: SongId,
-        from: usize,
-        amount: usize,
-        distributor: Address,
-    ) -> TTCall<()> {
-        self.abi_client
-            .get_chunks(song_id.into(), from.into(), amount.into(), distributor)
-            .legacy()
-            .gas(GAS)
-            .gas_price(1)
+        index: usize,
+    ) -> eyre::Result<Vec<(usize, SongId)>> {
+        let last_index = self.call_song_list_length().await?.as_usize() - 1;
+
+        if index < last_index {
+            let mut song_ids = Vec::with_capacity(last_index - index);
+            for i in index..last_index {
+                let id = self.abi_client.song_list(i.into()).set_defaults().await?;
+                song_ids.push((i, id.into()));
+            }
+            Ok(song_ids)
+        } else {
+            Ok(Vec::new())
+        }
     }
 
-    pub async fn get_chunks_signed_rlp(
+    pub async fn create_get_chunks_signed_rlp(
         &self,
         song_id: SongId,
         from: usize,
@@ -128,7 +108,7 @@ impl TangleTunesClient {
         Ok(tx.rlp_signed(&signature))
     }
 
-    pub fn decode_get_chunks_tx_rlp(&self, tx_rlp: &[u8]) -> eyre::Result<GetChunksCall> {
+    pub fn decode_get_chunks_params(&self, tx_rlp: &[u8]) -> eyre::Result<GetChunksCall> {
         let tx = TypedTransaction::decode(&Rlp::new(tx_rlp))?;
         Ok(AbiDecode::decode(tx.data().unwrap())?)
     }
@@ -137,7 +117,6 @@ impl TangleTunesClient {
         &'a self,
         tx: Bytes,
     ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
-        println!("Sendin raw transaction!");
         Ok(self
             .abi_client
             .deref()
@@ -148,14 +127,12 @@ impl TangleTunesClient {
             .await?)
     }
 
-    pub async fn deposit(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
+    pub async fn deposit(&self, iota: u128) -> eyre::Result<TransactionReceipt> {
         let receipt = self
             .abi_client
             .deposit()
-            .value(amount * ETHER)
-            .gas(GAS)
-            .gas_price(1)
-            .legacy()
+            .value(iota * WEI_PER_IOTA)
+            .set_defaults()
             .send()
             .await?
             .await?
@@ -164,13 +141,11 @@ impl TangleTunesClient {
         Ok(receipt)
     }
 
-    pub async fn withdraw(&self, amount: u64) -> eyre::Result<TransactionReceipt> {
+    pub async fn withdraw(&self, iota: u128) -> eyre::Result<TransactionReceipt> {
         let receipt = self
             .abi_client
-            .withdraw(amount.into())
-            .gas(GAS)
-            .gas_price(1)
-            .legacy()
+            .withdraw((iota * WEI_PER_IOTA).into())
+            .set_defaults()
             .send()
             .await?
             .await?
@@ -183,9 +158,7 @@ impl TangleTunesClient {
         let receipt = self
             .abi_client
             .delete_user()
-            .legacy()
-            .gas(GAS)
-            .gas_price(1)
+            .set_defaults()
             .send()
             .await?
             .await?
@@ -202,9 +175,7 @@ impl TangleTunesClient {
         let receipt = self
             .abi_client
             .create_user(name, description)
-            .legacy()
-            .gas(GAS)
-            .gas_price(1)
+            .set_defaults()
             .send()
             .await?
             .await?
@@ -217,12 +188,8 @@ impl TangleTunesClient {
         Ok(receipt)
     }
 
-    pub async fn nonce(&self) -> eyre::Result<U256> {
+    pub async fn get_nonce(&self) -> eyre::Result<U256> {
         Ok(self.abi_client.client_ref().initialize_nonce(None).await?)
-    }
-
-    fn contract_address(&self) -> Address {
-        self.abi_client.address()
     }
 
     pub(crate) fn wallet_address(&self) -> Address {
@@ -251,6 +218,14 @@ mod test {
 
     #[ignore]
     #[tokio::test]
+    async fn get_songs_test() -> eyre::Result<()> {
+        let app: &'static AppData = AppData::init_for_test(None, false).await?;
+        dbg!(app.client.get_song_ids_from_index(0).await?);
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
     async fn send_many_transactions() -> eyre::Result<()> {
         let app: &'static AppData = AppData::init_for_test(None, false).await?;
 
@@ -259,7 +234,7 @@ mod test {
             results.push(
                 dbg!(
                     app.client
-                        .edit_server_info("127.0.0.1:3000".to_string())
+                        .edit_server_info_call("127.0.0.1:3000".to_string())
                         .send()
                         .await
                 )?
@@ -268,10 +243,6 @@ mod test {
             );
             // tokio::time::sleep(Duration::from_millis(1000)).await;
         }
-
-        // while let Some(result) = results.next().await {
-        //     dbg!(result);
-        // }
 
         Ok(())
     }

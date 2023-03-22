@@ -30,7 +30,7 @@ toml = "0.7.2"
 serde = { version = "1.0.152", features = ["derive"] }
 
 # Database
-sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
 itertools = "0.10.5"
 num-integer = "0.1.45"
 tokio-util = { version = "0.7.7", features = ["codec"] }
@@ -38,6 +38,9 @@ bytes = "1.4.0"
 ctrlc = { version = "3.2.5", features = [] }
 async-trait = "0.1.66"
 thiserror = "1.0.39"
+chrono = "0.4.24"
+sha3 = "0.10.6"
+rand = "0.8.5"
 
 [build-dependencies]
 ethers = "2.0"

@@ -32,6 +32,10 @@ pub enum Command {
     #[command(subcommand)]
     Songs(SongsCommand),
 
+    /// Manage the local copy of the song-list
+    #[command(subcommand)]
+    SongIndex(SongIndexCommand),
+
     /// Start distributing.
     Distribute,
 }
@@ -107,9 +111,35 @@ pub enum AccountCommand {
 }
 
 #[derive(clap::Subcommand, Debug, Clone)]
-pub enum SongsCommand {
-    /// Download a song from another distributor
+pub enum SongIndexCommand {
+    /// Update the list of songs from the smart-contract
+    Update,
+
+    /// Reset the list of songs from the smart-contract
+    Reset {
+        #[arg(long)]
+        no_update: bool
+    },
+
+    /// List all songs
+    List,
+
+    /// Download indexed songs from another distributor.
     Download {
+        /// Download `amount` random songs not yet downloaded.
+        #[arg(long)]
+        amount: Option<usize>,
+
+        /// The ids of the songs to be downloaded
+        #[arg(long)]
+        index: Option<Vec<usize>>
+    }
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum SongsCommand {
+    /// Download chunks from a distributor's ip-address
+    DownloadDirect {
         /// The ip-address of the distributor
         #[arg(long)]
         ip: String,
@@ -120,15 +150,30 @@ pub enum SongsCommand {
 
         /// Optionally write the output to a file instead of the database
         #[arg(long)]
-        to_file: Option<String>,
+        to_file: String,
 
         /// The chunk to start at
-        #[arg(long, requires = "to_file", default_value_t = 0)]
+        #[arg(long, default_value_t = 0)]
         start: usize,
 
         /// The amount of chunks
-        #[arg(long, requires = "to_file", default_value_t = usize::MAX)]
+        #[arg(long)]
         chunks: usize,
+
+        /// The distributor address
+        #[arg(long)]
+        distributor_address: String
+    },
+
+    /// Download a song from a random distributor
+    Download {
+        /// The song-id to download
+        #[arg(long)]
+        song_id: String,
+
+        /// The file to download to
+        #[arg(long)]
+        to_file: Option<String>
     },
 
     /// Add a song from the file-system
@@ -143,18 +188,6 @@ pub enum SongsCommand {
 
     /// Remove a song from the database
     Remove {
-        /// The songs to selected
-        ids: Vec<String>,
-    },
-
-    /// Set a song to be distributed
-    StartDistribution {
-        /// The songs to selected
-        ids: Vec<String>,
-    },
-
-    /// Set a song to not be distributed
-    StopDistribution {
         /// The songs to selected
         ids: Vec<String>,
     },

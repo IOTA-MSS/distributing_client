@@ -11,7 +11,7 @@ pub use tangle_tunes_abi::*;
 )]
 pub mod tangle_tunes_abi {
     #[rustfmt::skip]
-    const __ABI: &str = "[\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_chunk\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"check_chunk\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"chunks_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"create_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"delete_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"deposit\",\n    \"outputs\": [],\n    \"stateMutability\": \"payable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"distribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"distributions\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_description\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"edit_price\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_server\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_server_info\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_distribution_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_song_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"get_chunks\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"get_rand_distributor\",\n    \"outputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"get_songs\",\n    \"outputs\": [\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes32\",\n            \"name\": \"song_id\",\n            \"type\": \"bytes32\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"song_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"author_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"price\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"length\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"duration\",\n            \"type\": \"uint256\"\n          }\n        ],\n        \"internalType\": \"struct TangleTunesI.Song_listing[]\",\n        \"name\": \"\",\n        \"type\": \"tuple[]\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_validator\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"manage_validators\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"song_list\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"song_list_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"songs\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"duration\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"undistribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_duration\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32[]\",\n        \"name\": \"_chunks\",\n        \"type\": \"bytes32[]\"\n      }\n    ],\n    \"name\": \"upload_song\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"users\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"username\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"description\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"server\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"balance\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"is_validator\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes\",\n            \"name\": \"data\",\n            \"type\": \"bytes\"\n          }\n        ],\n        \"internalType\": \"struct L1Address\",\n        \"name\": \"_target\",\n        \"type\": \"tuple\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  }\n]\n";
+    const __ABI: &str = "[\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_chunk\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"check_chunk\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"check_chunks\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32[]\",\n        \"name\": \"\",\n        \"type\": \"bytes32[]\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"chunks_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"create_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"delete_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"deposit\",\n    \"outputs\": [],\n    \"stateMutability\": \"payable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"distribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"distributions\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_description\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"edit_fee\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"edit_price\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_server\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_server_info\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_distribution_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_song_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"get_chunks\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"get_rand_distributor\",\n    \"outputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"\",\n        \"type\": \"string\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"get_songs\",\n    \"outputs\": [\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes32\",\n            \"name\": \"song_id\",\n            \"type\": \"bytes32\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"song_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"author_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"price\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"length\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"duration\",\n            \"type\": \"uint256\"\n          }\n        ],\n        \"internalType\": \"struct TangleTunesI.Song_listing[]\",\n        \"name\": \"\",\n        \"type\": \"tuple[]\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_validator\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"manage_validators\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"song_list\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"song_list_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"songs\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"duration\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"undistribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_duration\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32[]\",\n        \"name\": \"_chunks\",\n        \"type\": \"bytes32[]\"\n      }\n    ],\n    \"name\": \"upload_song\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"users\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"username\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"description\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"server\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"balance\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"is_validator\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes\",\n            \"name\": \"data\",\n            \"type\": \"bytes\"\n          }\n        ],\n        \"internalType\": \"struct L1Address\",\n        \"name\": \"_target\",\n        \"type\": \"tuple\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  }\n]\n";
     ///The parsed JSON ABI of the contract.
     pub static TANGLETUNESABI_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(||
     ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid"));
@@ -61,6 +61,17 @@ pub mod tangle_tunes_abi {
         ) -> ::ethers::contract::builders::ContractCall<M, bool> {
             self.0
                 .method_hash([68, 84, 117, 255], (song, index, chunk))
+                .expect("method not found (this should never happen)")
+        }
+        ///Calls the contract's `check_chunks` (0xdc70c749) function
+        pub fn check_chunks(
+            &self,
+            song: [u8; 32],
+            index: ::ethers::core::types::U256,
+            amount: ::ethers::core::types::U256,
+        ) -> ::ethers::contract::builders::ContractCall<M, ::std::vec::Vec<[u8; 32]>> {
+            self.0
+                .method_hash([220, 112, 199, 73], (song, index, amount))
                 .expect("method not found (this should never happen)")
         }
         ///Calls the contract's `chunks_length` (0x6a604ceb) function
@@ -125,6 +136,16 @@ pub mod tangle_tunes_abi {
                 .method_hash([206, 186, 115, 65], desc)
                 .expect("method not found (this should never happen)")
         }
+        ///Calls the contract's `edit_fee` (0x07330859) function
+        pub fn edit_fee(
+            &self,
+            song: [u8; 32],
+            fee: ::ethers::core::types::U256,
+        ) -> ::ethers::contract::builders::ContractCall<M, ()> {
+            self.0
+                .method_hash([7, 51, 8, 89], (song, fee))
+                .expect("method not found (this should never happen)")
+        }
         ///Calls the contract's `edit_price` (0xa5642b14) function
         pub fn edit_price(
             &self,
@@ -182,7 +203,7 @@ pub mod tangle_tunes_abi {
             song: [u8; 32],
         ) -> ::ethers::contract::builders::ContractCall<
             M,
-            ::ethers::core::types::Address,
+            (::ethers::core::types::Address, ::std::string::String),
         > {
             self.0
                 .method_hash([221, 223, 65, 179], song)
@@ -334,6 +355,23 @@ pub mod tangle_tunes_abi {
         pub index: ::ethers::core::types::U256,
         pub chunk: [u8; 32],
     }
+    ///Container type for all input parameters for the `check_chunks` function with signature `check_chunks(bytes32,uint256,uint256)` and selector `0xdc70c749`
+    #[derive(
+        Clone,
+        ::ethers::contract::EthCall,
+        ::ethers::contract::EthDisplay,
+        Default,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash
+    )]
+    #[ethcall(name = "check_chunks", abi = "check_chunks(bytes32,uint256,uint256)")]
+    pub struct CheckChunksCall {
+        pub song: [u8; 32],
+        pub index: ::ethers::core::types::U256,
+        pub amount: ::ethers::core::types::U256,
+    }
     ///Container type for all input parameters for the `chunks_length` function with signature `chunks_length(bytes32)` and selector `0x6a604ceb`
     #[derive(
         Clone,
@@ -434,6 +472,22 @@ pub mod tangle_tunes_abi {
     #[ethcall(name = "edit_description", abi = "edit_description(string)")]
     pub struct EditDescriptionCall {
         pub desc: ::std::string::String,
+    }
+    ///Container type for all input parameters for the `edit_fee` function with signature `edit_fee(bytes32,uint256)` and selector `0x07330859`
+    #[derive(
+        Clone,
+        ::ethers::contract::EthCall,
+        ::ethers::contract::EthDisplay,
+        Default,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash
+    )]
+    #[ethcall(name = "edit_fee", abi = "edit_fee(bytes32,uint256)")]
+    pub struct EditFeeCall {
+        pub song: [u8; 32],
+        pub fee: ::ethers::core::types::U256,
     }
     ///Container type for all input parameters for the `edit_price` function with signature `edit_price(bytes32,uint256)` and selector `0xa5642b14`
     #[derive(
@@ -690,6 +744,7 @@ pub mod tangle_tunes_abi {
     #[derive(Clone, ::ethers::contract::EthAbiType, Debug, PartialEq, Eq, Hash)]
     pub enum TangleTunesAbiCalls {
         CheckChunk(CheckChunkCall),
+        CheckChunks(CheckChunksCall),
         ChunksLength(ChunksLengthCall),
         CreateUser(CreateUserCall),
         DeleteUser(DeleteUserCall),
@@ -697,6 +752,7 @@ pub mod tangle_tunes_abi {
         Distribute(DistributeCall),
         Distributions(DistributionsCall),
         EditDescription(EditDescriptionCall),
+        EditFee(EditFeeCall),
         EditPrice(EditPriceCall),
         EditServerInfo(EditServerInfoCall),
         GenDistributionId(GenDistributionIdCall),
@@ -722,6 +778,10 @@ pub mod tangle_tunes_abi {
             if let Ok(decoded)
                 = <CheckChunkCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::CheckChunk(decoded));
+            }
+            if let Ok(decoded)
+                = <CheckChunksCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+                return Ok(Self::CheckChunks(decoded));
             }
             if let Ok(decoded)
                 = <ChunksLengthCall as ::ethers::core::abi::AbiDecode>::decode(data) {
@@ -750,6 +810,10 @@ pub mod tangle_tunes_abi {
             if let Ok(decoded)
                 = <EditDescriptionCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::EditDescription(decoded));
+            }
+            if let Ok(decoded)
+                = <EditFeeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+                return Ok(Self::EditFee(decoded));
             }
             if let Ok(decoded)
                 = <EditPriceCall as ::ethers::core::abi::AbiDecode>::decode(data) {
@@ -832,6 +896,9 @@ pub mod tangle_tunes_abi {
                 Self::CheckChunk(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
+                Self::CheckChunks(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
                 Self::ChunksLength(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
@@ -851,6 +918,7 @@ pub mod tangle_tunes_abi {
                 Self::EditDescription(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
+                Self::EditFee(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::EditPrice(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
@@ -902,6 +970,7 @@ pub mod tangle_tunes_abi {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             match self {
                 Self::CheckChunk(element) => ::core::fmt::Display::fmt(element, f),
+                Self::CheckChunks(element) => ::core::fmt::Display::fmt(element, f),
                 Self::ChunksLength(element) => ::core::fmt::Display::fmt(element, f),
                 Self::CreateUser(element) => ::core::fmt::Display::fmt(element, f),
                 Self::DeleteUser(element) => ::core::fmt::Display::fmt(element, f),
@@ -909,6 +978,7 @@ pub mod tangle_tunes_abi {
                 Self::Distribute(element) => ::core::fmt::Display::fmt(element, f),
                 Self::Distributions(element) => ::core::fmt::Display::fmt(element, f),
                 Self::EditDescription(element) => ::core::fmt::Display::fmt(element, f),
+                Self::EditFee(element) => ::core::fmt::Display::fmt(element, f),
                 Self::EditPrice(element) => ::core::fmt::Display::fmt(element, f),
                 Self::EditServerInfo(element) => ::core::fmt::Display::fmt(element, f),
                 Self::GenDistributionId(element) => ::core::fmt::Display::fmt(element, f),
@@ -935,6 +1005,11 @@ pub mod tangle_tunes_abi {
     impl ::core::convert::From<CheckChunkCall> for TangleTunesAbiCalls {
         fn from(value: CheckChunkCall) -> Self {
             Self::CheckChunk(value)
+        }
+    }
+    impl ::core::convert::From<CheckChunksCall> for TangleTunesAbiCalls {
+        fn from(value: CheckChunksCall) -> Self {
+            Self::CheckChunks(value)
         }
     }
     impl ::core::convert::From<ChunksLengthCall> for TangleTunesAbiCalls {
@@ -970,6 +1045,11 @@ pub mod tangle_tunes_abi {
     impl ::core::convert::From<EditDescriptionCall> for TangleTunesAbiCalls {
         fn from(value: EditDescriptionCall) -> Self {
             Self::EditDescription(value)
+        }
+    }
+    impl ::core::convert::From<EditFeeCall> for TangleTunesAbiCalls {
+        fn from(value: EditFeeCall) -> Self {
+            Self::EditFee(value)
         }
     }
     impl ::core::convert::From<EditPriceCall> for TangleTunesAbiCalls {
@@ -1064,6 +1144,18 @@ pub mod tangle_tunes_abi {
         Hash
     )]
     pub struct CheckChunkReturn(pub bool);
+    ///Container type for all return fields from the `check_chunks` function with signature `check_chunks(bytes32,uint256,uint256)` and selector `0xdc70c749`
+    #[derive(
+        Clone,
+        ::ethers::contract::EthAbiType,
+        ::ethers::contract::EthAbiCodec,
+        Default,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash
+    )]
+    pub struct CheckChunksReturn(pub ::std::vec::Vec<[u8; 32]>);
     ///Container type for all return fields from the `chunks_length` function with signature `chunks_length(bytes32)` and selector `0x6a604ceb`
     #[derive(
         Clone,
@@ -1127,7 +1219,10 @@ pub mod tangle_tunes_abi {
         Eq,
         Hash
     )]
-    pub struct GetRandDistributorReturn(pub ::ethers::core::types::Address);
+    pub struct GetRandDistributorReturn(
+        pub ::ethers::core::types::Address,
+        pub ::std::string::String,
+    );
     ///Container type for all return fields from the `get_songs` function with signature `get_songs(uint256,uint256)` and selector `0x99a7cd37`
     #[derive(
         Clone,

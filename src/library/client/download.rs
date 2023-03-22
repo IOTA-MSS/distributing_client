@@ -6,19 +6,46 @@ use crate::{
     },
     BYTES_PER_CHUNK_USIZE,
 };
-use ethers::types::Address;
+use bytes::BytesMut;
+use ethers::{types::Address, utils::keccak256};
 use ethers_providers::StreamExt;
-use futures::SinkExt;
-use tokio::net::{tcp::ReadHalf, TcpStream};
+use futures::{SinkExt, Stream};
+use num_integer::div_ceil;
+use std::net::SocketAddr;
+use tokio::net::TcpStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const CHUNKS_PER_REQUEST: usize = 20;
 const CONCURRENT_REQUESTS: usize = 3;
 
 impl TangleTunesClient {
+    /// Downloads the chunks from the smart-contract and verifies them against the given song-data.
+    pub async fn verify_chunks_against_smart_contract(
+        &self,
+        song_id: SongId,
+        song_data: &[u8],
+        first_chunk_id: usize,
+    ) -> eyre::Result<bool> {
+        let chunks = div_ceil(song_data.len(), BYTES_PER_CHUNK_USIZE);
+        let contract_hashes = self.call_check_chunks(song_id, first_chunk_id, chunks).await?;
+        let calculated_hashes = song_data
+            .chunks(BYTES_PER_CHUNK_USIZE)
+            .map(keccak256)
+            .map(Into::into)
+            .collect::<Vec<SongId>>();
+        assert_eq!(calculated_hashes.len(), chunks);
+
+        if contract_hashes == calculated_hashes {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Download chunks from the distributor
     pub async fn download_from_distributor(
         &'static self,
-        ip_address: String,
+        socket_address: SocketAddr,
         song_id: SongId,
         first_chunk_id: usize,
         chunk_amount: usize,
@@ -26,7 +53,7 @@ impl TangleTunesClient {
     ) -> eyre::Result<Vec<u8>> {
         let last_chunk_id = first_chunk_id + chunk_amount;
 
-        let mut stream = TcpStream::connect(ip_address).await?;
+        let mut stream = TcpStream::connect(socket_address).await?;
         let (read_stream, write_stream) = stream.split();
         let mut read_stream = FramedRead::new(read_stream, SendChunksDecoder::new());
         let mut write_stream = FramedWrite::new(write_stream, RequestChunksEncoder);
@@ -41,7 +68,7 @@ impl TangleTunesClient {
                 println!("Requesting {request_size} chunks starting at id {request_id}");
 
                 let tx_rlp = self
-                    .get_chunks_signed_rlp(
+                    .create_get_chunks_signed_rlp(
                         song_id.clone(),
                         request_id,
                         request_size,
@@ -53,19 +80,30 @@ impl TangleTunesClient {
             }
 
             // And then read the next response
-            read_chunks_from_stream(&mut read_stream, &mut song).await?
+            add_next_to_buffer(&mut read_stream, &mut song).await?
         }
-        Ok(song)
+
+        if self
+            .verify_chunks_against_smart_contract(song_id, &song, first_chunk_id)
+            .await?
+        {
+            println!("Verification of song hashes successful!");
+            Ok(song)
+        } else {
+            Err(eyre!("Song verification failed"))
+        }
     }
 }
 
+/// Whether the song is completely downloaded, given the amount of chunks that it should contain.
 fn song_is_complete(song: &[u8], chunks: usize) -> bool {
-    song.len() > (chunks * BYTES_PER_CHUNK_USIZE) - BYTES_PER_CHUNK_USIZE
+    song.len() + BYTES_PER_CHUNK_USIZE > (chunks * BYTES_PER_CHUNK_USIZE)
 }
 
-async fn read_chunks_from_stream(
-    read_stream: &mut FramedRead<ReadHalf<'_>, SendChunksDecoder>,
-    song: &mut Vec<u8>,
+/// Reads the next chunk from the stream and adds them to the buffer.
+async fn add_next_to_buffer(
+    read_stream: &mut (impl Stream<Item = eyre::Result<(u32, BytesMut)>> + Unpin),
+    buffer: &mut Vec<u8>,
 ) -> eyre::Result<()> {
     let result = read_stream.next().await.ok_or(eyre!(
         "Distributor closed stream before all data was received"
@@ -76,12 +114,11 @@ async fn read_chunks_from_stream(
         chunks.len()
     );
     for (chunk, chunk_id) in chunks.chunks(BYTES_PER_CHUNK_USIZE).zip(start_chunk_id..) {
-        println!(" -- Decoded chunk {chunk_id}");
         assert_eq!(
             chunk_id as usize,
-            (song.len() + start_chunk_id as usize) / BYTES_PER_CHUNK_USIZE
+            (buffer.len() + start_chunk_id as usize) / BYTES_PER_CHUNK_USIZE
         );
-        song.extend(chunk);
+        buffer.extend(chunk);
     }
     Ok(())
 }
@@ -119,5 +156,67 @@ impl RequestQueue {
             }
         };
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        library::{
+            app::AppData,
+            client::download::{RequestQueue, CHUNKS_PER_REQUEST},
+        },
+        test::VALIDATED_SONG_HEX_ID,
+        BYTES_PER_CHUNK_USIZE,
+    };
+
+    use super::song_is_complete;
+
+    #[ignore]
+    #[tokio::test]
+    async fn test() -> eyre::Result<()> {
+        let app = AppData::init_for_test(None, false).await?;
+        let song_id = VALIDATED_SONG_HEX_ID.parse()?;
+        let chunks = app.database.get_chunks(&song_id, 0, 20).await?;
+        assert!(
+            app.client
+                .verify_chunks_against_smart_contract(song_id, &chunks, 0)
+                .await?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn song_is_complete_test() {
+        assert!(song_is_complete(&[0; 1], 1));
+        assert!(song_is_complete(&[0; BYTES_PER_CHUNK_USIZE], 1));
+        assert!(!song_is_complete(&[0; BYTES_PER_CHUNK_USIZE], 2));
+        assert!(song_is_complete(&[0; BYTES_PER_CHUNK_USIZE + 1], 2));
+        assert!(song_is_complete(&[0; BYTES_PER_CHUNK_USIZE * 2 - 1], 2));
+        assert!(song_is_complete(&[0; BYTES_PER_CHUNK_USIZE * 2], 2));
+    }
+
+    #[test]
+    fn request_queue_test() {
+        let requests = CHUNKS_PER_REQUEST * 4 - 1;
+        let song = vec![0; BYTES_PER_CHUNK_USIZE * requests];
+        let mut queue = RequestQueue::new(0, requests);
+
+        assert_eq!(
+            queue.request_now(&song),
+            Some((0 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
+        );
+        assert_eq!(
+            queue.request_now(&song),
+            Some((1 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
+        );
+        assert_eq!(
+            queue.request_now(&song),
+            Some((2 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
+        );
+        assert_eq!(
+            queue.request_now(&song),
+            Some((3 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST - 1))
+        );
     }
 }
