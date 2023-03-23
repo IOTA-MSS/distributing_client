@@ -122,7 +122,7 @@ impl Encoder<(u32, &Bytes)> for SendChunksEncoder {
         dst.reserve(8 + item.1.len());
         dst.extend_from_slice(&start_chunk_id);
         dst.extend_from_slice(&body_len);
-        dst.extend_from_slice(&item.1);
+        dst.extend_from_slice(item.1);
         Ok(())
     }
 }

@@ -32,9 +32,9 @@ impl From<[u8; 32]> for SongId {
     }
 }
 
-impl Into<[u8; 32]> for SongId {
-    fn into(self) -> [u8; 32] {
-        self.0
+impl From<SongId> for [u8; 32] {
+    fn from(val: SongId) -> Self {
+        val.0
     }
 }
 
@@ -69,8 +69,8 @@ impl SongId {
         Ok(Self(try_from_hex_prefix(hex)?))
     }
 
-    pub fn to_hex(&self) -> String {
-        to_hex_prefix(&self.0)
+    pub fn to_hex(self) -> String {
+        to_hex_prefix(self.0)
     }
 }
 
@@ -135,11 +135,11 @@ impl TransactionReceiptExt for TransactionReceipt {
 //------------------------------------------------------------------------------------------------
 
 pub trait PendingTransactionExt: Sized {
-    fn with_client<'b>(self, client: &'b TangleTunesClient) -> PendingTransaction<'b, Http>;
+    fn with_client(self, client: &TangleTunesClient) -> PendingTransaction<'_, Http>;
 }
 
 impl<'a> PendingTransactionExt for PendingTransaction<'a, Http> {
-    fn with_client<'b>(self, client: &'b TangleTunesClient) -> PendingTransaction<'b, Http> {
+    fn with_client(self, client: &TangleTunesClient) -> PendingTransaction<'_, Http> {
         client.create_pending_tx(self.tx_hash(), 1)
     }
 }

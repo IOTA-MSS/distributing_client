@@ -58,7 +58,7 @@ pub async fn download(
                 .get_song_index()
                 .await?
                 .into_iter()
-                .filter(|(_, id)| !downloaded_song_ids.contains(&id))
+                .filter(|(_, id)| !downloaded_song_ids.contains(id))
                 .choose_multiple(&mut thread_rng(), amount)
         }
     };

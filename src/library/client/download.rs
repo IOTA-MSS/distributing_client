@@ -80,14 +80,13 @@ impl TangleTunesClient {
 
                 let tx_rlp = self
                     .create_get_chunks_signed_rlp(
-                        song_id.clone(),
+                        song_id,
                         request_id,
                         request_size,
                         distributor_address,
                     )
                     .await?;
                 write_stream.send(&tx_rlp.0).await?;
-                break;
             }
 
             // And then read the next response

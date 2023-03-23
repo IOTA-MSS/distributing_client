@@ -18,25 +18,28 @@ const POLL_INTERVAL: Duration = Duration::from_secs(10);
 pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infallible {
     println!("Auto-distributor spawned");
 
+    // Create the interval
     let mut interval =
         tokio::time::interval_at(tokio::time::Instant::now() + POLL_INTERVAL, POLL_INTERVAL);
     interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
-    let mut last_distribution = Utc::now();
 
-    let downloaded_ids = app.database.get_all_downloaded_song_ids().await.unwrap();
-    let mut queue = NewSongQueue::new(Duration::from_secs(30));
-
-    app.database
-        .get_song_index()
-        .await
-        .unwrap()
-        .into_iter()
-        .filter(|(_, id)| (!downloaded_ids.contains(id)))
-        .for_each(|(index, id)| queue.push(index, id));
+    // Create the song-queue
+    let mut queue = {
+        let downloaded_ids = app.database.get_all_downloaded_song_ids().await.unwrap();
+        let mut queue = NewSongQueue::new(Duration::from_secs(30));
+        app.database
+            .get_song_index()
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|(_, id)| (!downloaded_ids.contains(id)))
+            .for_each(|(index, id)| queue.push(index, id));
+        queue
+    };
 
     loop {
+        let last_distribution = Utc::now() - chrono::Duration::milliseconds(10);
         interval.tick().await;
-        tokio::time::sleep(Duration::from_secs(10)).await;
 
         if auto_download {
             if let Err(e) = download_a_new_song(app, &mut queue).await {
@@ -47,7 +50,6 @@ pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infa
         if let Err(e) = distribute_added_songs(app, &last_distribution).await {
             println!("Couldn't distribute new songs: {e}");
         }
-        last_distribution = Utc::now() - chrono::Duration::milliseconds(10);
     }
 }
 
@@ -65,7 +67,7 @@ async fn download_a_new_song(app: &'static AppData, queue: &mut NewSongQueue) ->
         };
 
         // If the song is already downloaded, find the next one
-        if app.database.get_chunks(&id, 0, 1).await.is_ok() {
+        if app.database.get_chunks(id, 0, 1).await.is_ok() {
             queue.update(true);
             continue;
         };
@@ -93,7 +95,7 @@ async fn distribute_added_songs(app: &'static AppData, from: &DateTime<Utc>) -> 
     for song_id in app.database.get_new_songs(from).await? {
         println!("Registering for song {song_id}...");
         if let Ok(pending_tx) = app.client.distribute_call(song_id, app.fee).send().await {
-            if let Ok(_) = pending_tx.await {
+            if (pending_tx.await).is_ok() {
                 println!("Succesfully registered for song {song_id}.");
             } else {
                 println!("Registration for song {song_id} failed.");

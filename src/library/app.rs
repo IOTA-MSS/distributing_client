@@ -61,7 +61,7 @@ impl AppDataBuilder {
         let wallet = {
             if let Some((key, encrypted)) = database.get_key().await? {
                 let key = match (encrypted, &self.password) {
-                    (true, Some(password)) => Ok(crypto::decrypt_private_key(&key, &password)?),
+                    (true, Some(password)) => Ok(crypto::decrypt_private_key(&key, password)?),
                     (false, None) => Ok(key),
                     (true, None) => Err(eyre!("Wallet is encrypted, please give a password.")),
                     (false, Some(_)) => Err(eyre!("Wallet is not encrypted, no password needed.")),

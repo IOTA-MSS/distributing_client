@@ -59,7 +59,7 @@ fn ask_confirmation(msg: &str) -> eyre::Result<bool> {
     println!("{msg} [y/N]");
     let mut line = String::new();
     stdin().read_line(&mut line)?;
-    if line.starts_with("y") || line.starts_with("Y") {
+    if line.starts_with('y') || line.starts_with('y') {
         println!("Ok!");
         Ok(true)
     } else {

@@ -4,7 +4,6 @@ use color_eyre::Report;
 use ethers_providers::StreamExt;
 use futures::stream::FuturesUnordered;
 use tokio::time::sleep;
-
 use crate::library::{app::AppData, util::TransactionReceiptExt};
 
 /// Registers for distribution of all songs in the database.
@@ -22,11 +21,11 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
 
             let tx_hash = app
                 .client
-                .distribute_call(song_id.clone(), app.fee)
+                .distribute_call(song_id, app.fee)
                 .send()
                 .await?
                 .tx_hash();
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(2)).await;
 
             pending_txs.push(async move {
                 let receipt = app
@@ -70,7 +69,7 @@ pub async fn deregister_for_songs(app: &AppData) -> eyre::Result<()> {
             println!("Deregistering song {song_id} on the smart-contract..");
             let tx_hash = app
                 .client
-                .undistribute_call(song_id.clone())
+                .undistribute_call(song_id)
                 .send()
                 .await?
                 .tx_hash();

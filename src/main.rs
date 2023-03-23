@@ -1,3 +1,5 @@
+// #![warn(clippy::all)]
+#![allow(clippy::needless_question_mark)]
 use arguments::{
     AccountCommand, Arguments, Command, SongIndexCommand, SongsCommand, WalletCommand,
 };

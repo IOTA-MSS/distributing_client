@@ -14,6 +14,7 @@ use super::client::TangleTunesClient;
 /// By setting the timeout and attempts, the initial sending will be retried that amount of times.
 ///
 /// If any transaction fails for whatever reason
+#[allow(clippy::type_complexity)]
 pub struct TransactionPool<T> {
     client: &'static TangleTunesClient,
     stage1: VecDeque<BoxFuture<'static, eyre::Result<(PendingTransaction<'static, Http>, T)>>>,

@@ -114,10 +114,10 @@ impl TangleTunesClient {
         Ok(AbiDecode::decode(tx.data().unwrap())?)
     }
 
-    pub async fn send_raw_tx<'a>(
-        &'a self,
+    pub async fn send_raw_tx(
+        &self,
         tx: Bytes,
-    ) -> Result<PendingTransaction<'a, Http>, eyre::Report> {
+    ) -> Result<PendingTransaction<'_, Http>, eyre::Report> {
         Ok(self
             .abi_client
             .deref()

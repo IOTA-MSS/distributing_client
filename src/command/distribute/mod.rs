@@ -49,7 +49,7 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
 
     // And register for the songs
     println!("Registering for all songs in database..");
-    let result = match register_for_songs(&app).await {
+    let result = match register_for_songs(app).await {
         Ok(()) => {
             tokio::select! {
                 // The ctrl-c exit-handler
@@ -63,7 +63,7 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
                 }
 
                 // The main process that handles incoming connections
-                res = accept_tcp_connections(listener, &app) => {
+                res = accept_tcp_connections(listener, app) => {
                     match res {
                         Err(e) => Err(e),
                         Ok(_) => unreachable!()
@@ -109,7 +109,7 @@ async fn handle_new_listener(
     let mut tcp_reader = FramedRead::new(stream.0, RequestChunksDecoder::new());
     let mut tcp_writer = FramedWrite::new(stream.1, SendChunksEncoder);
     // The amount of credit in chunks
-    let mut credit: u32 = DEBT_LIMIT as u32;
+    let mut credit: u32 = DEBT_LIMIT;
     // Queue of client chunk-requests
     let mut open_requests: VecDeque<GetChunksCall> = VecDeque::new();
     // The transactions that resolves to the amount of credit.
@@ -196,7 +196,7 @@ async fn handle_new_listener(
                 .await?;
 
             println!("Sending {amount} chunks starting at {index} to {addr}.");
-            tcp_writer.send((index as u32, &chunks.into())).await?;
+            tcp_writer.send((index, &chunks.into())).await?;
         }
     }
 }
