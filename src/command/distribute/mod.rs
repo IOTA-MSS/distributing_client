@@ -26,7 +26,7 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 
 const DEBT_LIMIT: u32 = 10;
 
-pub async fn run_distribute(app: &'static AppData, auto_distribute: bool) -> eyre::Result<()> {
+pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre::Result<()> {
     let mut exit_listener = exit_listener()?;
 
     // Bind the address
@@ -50,9 +50,6 @@ pub async fn run_distribute(app: &'static AppData, auto_distribute: bool) -> eyr
     println!("Registering for all songs in database..");
     let result = match register_for_songs(&app).await {
         Ok(()) => {
-            // let auto_distributor =
-            //     auto_distribute.then(|| );
-
             tokio::select! {
                 // The ctrl-c exit-handler
                 _ = &mut exit_listener => {
@@ -60,13 +57,7 @@ pub async fn run_distribute(app: &'static AppData, auto_distribute: bool) -> eyr
                 }
 
                 // The auto-distribute task
-                res = async {
-                    if auto_distribute {
-                        tokio::task::spawn(self::auto_distribute(app)).await
-                    } else {
-                        pending().await
-                    }
-                } => {
+                res = tokio::task::spawn(self::auto_distribute(app, auto_download)) => {
                     Err(res.unwrap_err().into())
                 }
 

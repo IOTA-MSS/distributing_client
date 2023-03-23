@@ -42,7 +42,7 @@ pub enum Command {
     Distribute {
         /// Automatically download and distribute songs from other distributors
         #[arg(long)]
-        auto_distribute: bool
+        auto_download: bool
     },
 }
 
