@@ -1,4 +1,7 @@
-use crate::{library::{app::AppData, util::SongId}, command};
+use crate::{
+    command,
+    library::{app::AppData, util::SongId},
+};
 use rand::{seq::IteratorRandom, thread_rng};
 
 pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>> {

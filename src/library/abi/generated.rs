@@ -7,14 +7,16 @@ pub use tangle_tunes_abi::*;
     clippy::upper_case_acronyms,
     clippy::type_complexity,
     dead_code,
-    non_camel_case_types,
+    non_camel_case_types
 )]
 pub mod tangle_tunes_abi {
     #[rustfmt::skip]
     const __ABI: &str = "[\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_chunk\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"check_chunk\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"check_chunks\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32[]\",\n        \"name\": \"\",\n        \"type\": \"bytes32[]\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"chunks_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"create_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"delete_user\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"deposit\",\n    \"outputs\": [],\n    \"stateMutability\": \"payable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"distribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"distributions\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_desc\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_description\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_fee\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"edit_fee\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"edit_price\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_server\",\n        \"type\": \"string\"\n      }\n    ],\n    \"name\": \"edit_server_info\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_distribution_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"gen_song_id\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"pure\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_distributor\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"get_chunks\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"get_rand_distributor\",\n    \"outputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"\",\n        \"type\": \"string\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_index\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"get_songs\",\n    \"outputs\": [\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes32\",\n            \"name\": \"song_id\",\n            \"type\": \"bytes32\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"song_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"string\",\n            \"name\": \"author_name\",\n            \"type\": \"string\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"price\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"length\",\n            \"type\": \"uint256\"\n          },\n          {\n            \"internalType\": \"uint256\",\n            \"name\": \"duration\",\n            \"type\": \"uint256\"\n          }\n        ],\n        \"internalType\": \"struct TangleTunesI.Song_listing[]\",\n        \"name\": \"\",\n        \"type\": \"tuple[]\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_validator\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"manage_validators\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"song_list\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [],\n    \"name\": \"song_list_length\",\n    \"outputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"songs\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"address\",\n        \"name\": \"author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"duration\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"bytes32\",\n        \"name\": \"_song\",\n        \"type\": \"bytes32\"\n      }\n    ],\n    \"name\": \"undistribute\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"_author\",\n        \"type\": \"address\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"_name\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_price\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_length\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_duration\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bytes32[]\",\n        \"name\": \"_chunks\",\n        \"type\": \"bytes32[]\"\n      }\n    ],\n    \"name\": \"upload_song\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"address\",\n        \"name\": \"\",\n        \"type\": \"address\"\n      }\n    ],\n    \"name\": \"users\",\n    \"outputs\": [\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"exists\",\n        \"type\": \"bool\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"username\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"description\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"string\",\n        \"name\": \"server\",\n        \"type\": \"string\"\n      },\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"balance\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"internalType\": \"bool\",\n        \"name\": \"is_validator\",\n        \"type\": \"bool\"\n      }\n    ],\n    \"stateMutability\": \"view\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"amount\",\n        \"type\": \"uint256\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  },\n  {\n    \"inputs\": [\n      {\n        \"internalType\": \"uint256\",\n        \"name\": \"_amount\",\n        \"type\": \"uint256\"\n      },\n      {\n        \"components\": [\n          {\n            \"internalType\": \"bytes\",\n            \"name\": \"data\",\n            \"type\": \"bytes\"\n          }\n        ],\n        \"internalType\": \"struct L1Address\",\n        \"name\": \"_target\",\n        \"type\": \"tuple\"\n      }\n    ],\n    \"name\": \"withdraw\",\n    \"outputs\": [],\n    \"stateMutability\": \"nonpayable\",\n    \"type\": \"function\"\n  }\n]\n";
     ///The parsed JSON ABI of the contract.
-    pub static TANGLETUNESABI_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(||
-    ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid"));
+    pub static TANGLETUNESABI_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> =
+        ::ethers::contract::Lazy::new(|| {
+            ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid")
+        });
     pub struct TangleTunesAbi<M>(::ethers::contract::Contract<M>);
     impl<M> ::core::clone::Clone for TangleTunesAbi<M> {
         fn clone(&self) -> Self {
@@ -34,7 +36,9 @@ pub mod tangle_tunes_abi {
     }
     impl<M> ::core::fmt::Debug for TangleTunesAbi<M> {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple(stringify!(TangleTunesAbi)).field(&self.address()).finish()
+            f.debug_tuple(stringify!(TangleTunesAbi))
+                .field(&self.address())
+                .finish()
         }
     }
     impl<M: ::ethers::providers::Middleware> TangleTunesAbi<M> {
@@ -44,13 +48,11 @@ pub mod tangle_tunes_abi {
             address: T,
             client: ::std::sync::Arc<M>,
         ) -> Self {
-            Self(
-                ::ethers::contract::Contract::new(
-                    address.into(),
-                    TANGLETUNESABI_ABI.clone(),
-                    client,
-                ),
-            )
+            Self(::ethers::contract::Contract::new(
+                address.into(),
+                TANGLETUNESABI_ABI.clone(),
+                client,
+            ))
         }
         ///Calls the contract's `check_chunk` (0x445475ff) function
         pub fn check_chunk(
@@ -121,7 +123,11 @@ pub mod tangle_tunes_abi {
             p0: [u8; 32],
         ) -> ::ethers::contract::builders::ContractCall<
             M,
-            (bool, ::ethers::core::types::U256, ::ethers::core::types::U256),
+            (
+                bool,
+                ::ethers::core::types::U256,
+                ::ethers::core::types::U256,
+            ),
         > {
             self.0
                 .method_hash([221, 14, 98, 21], p0)
@@ -214,10 +220,7 @@ pub mod tangle_tunes_abi {
             &self,
             index: ::ethers::core::types::U256,
             amount: ::ethers::core::types::U256,
-        ) -> ::ethers::contract::builders::ContractCall<
-            M,
-            ::std::vec::Vec<SongListing>,
-        > {
+        ) -> ::ethers::contract::builders::ContractCall<M, ::std::vec::Vec<SongListing>> {
             self.0
                 .method_hash([153, 167, 205, 55], (index, amount))
                 .expect("method not found (this should never happen)")
@@ -333,7 +336,8 @@ pub mod tangle_tunes_abi {
         }
     }
     impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>>
-    for TangleTunesAbi<M> {
+        for TangleTunesAbi<M>
+    {
         fn from(contract: ::ethers::contract::Contract<M>) -> Self {
             Self::new(contract.address(), contract.client())
         }
@@ -347,7 +351,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "check_chunk", abi = "check_chunk(bytes32,uint256,bytes32)")]
     pub struct CheckChunkCall {
@@ -364,7 +368,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "check_chunks", abi = "check_chunks(bytes32,uint256,uint256)")]
     pub struct CheckChunksCall {
@@ -381,7 +385,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "chunks_length", abi = "chunks_length(bytes32)")]
     pub struct ChunksLengthCall {
@@ -396,7 +400,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "create_user", abi = "create_user(string,string)")]
     pub struct CreateUserCall {
@@ -412,7 +416,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "delete_user", abi = "delete_user()")]
     pub struct DeleteUserCall;
@@ -425,7 +429,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "deposit", abi = "deposit()")]
     pub struct DepositCall;
@@ -438,7 +442,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "distribute", abi = "distribute(bytes32,uint256)")]
     pub struct DistributeCall {
@@ -454,7 +458,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "distributions", abi = "distributions(bytes32)")]
     pub struct DistributionsCall(pub [u8; 32]);
@@ -467,7 +471,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "edit_description", abi = "edit_description(string)")]
     pub struct EditDescriptionCall {
@@ -482,7 +486,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "edit_fee", abi = "edit_fee(bytes32,uint256)")]
     pub struct EditFeeCall {
@@ -498,7 +502,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "edit_price", abi = "edit_price(bytes32,uint256)")]
     pub struct EditPriceCall {
@@ -514,7 +518,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "edit_server_info", abi = "edit_server_info(string)")]
     pub struct EditServerInfoCall {
@@ -529,7 +533,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(
         name = "gen_distribution_id",
@@ -548,7 +552,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "gen_song_id", abi = "gen_song_id(string,address)")]
     pub struct GenSongIdCall {
@@ -564,9 +568,12 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
-    #[ethcall(name = "get_chunks", abi = "get_chunks(bytes32,uint256,uint256,address)")]
+    #[ethcall(
+        name = "get_chunks",
+        abi = "get_chunks(bytes32,uint256,uint256,address)"
+    )]
     pub struct GetChunksCall {
         pub song: [u8; 32],
         pub index: ::ethers::core::types::U256,
@@ -582,7 +589,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "get_rand_distributor", abi = "get_rand_distributor(bytes32)")]
     pub struct GetRandDistributorCall {
@@ -597,7 +604,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "get_songs", abi = "get_songs(uint256,uint256)")]
     pub struct GetSongsCall {
@@ -613,7 +620,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "manage_validators", abi = "manage_validators(address)")]
     pub struct ManageValidatorsCall {
@@ -628,7 +635,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "song_list", abi = "song_list(uint256)")]
     pub struct SongListCall(pub ::ethers::core::types::U256);
@@ -641,7 +648,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "song_list_length", abi = "song_list_length()")]
     pub struct SongListLengthCall;
@@ -654,7 +661,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "songs", abi = "songs(bytes32)")]
     pub struct SongsCall(pub [u8; 32]);
@@ -667,7 +674,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "undistribute", abi = "undistribute(bytes32)")]
     pub struct UndistributeCall {
@@ -682,7 +689,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(
         name = "upload_song",
@@ -705,7 +712,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "users", abi = "users(address)")]
     pub struct UsersCall(pub ::ethers::core::types::Address);
@@ -718,7 +725,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "withdraw", abi = "withdraw(uint256)")]
     pub struct WithdrawCall {
@@ -733,7 +740,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "withdraw", abi = "withdraw(uint256,(bytes))")]
     pub struct WithdrawWithAmountCall {
@@ -775,116 +782,99 @@ pub mod tangle_tunes_abi {
             data: impl AsRef<[u8]>,
         ) -> ::core::result::Result<Self, ::ethers::core::abi::AbiError> {
             let data = data.as_ref();
-            if let Ok(decoded)
-                = <CheckChunkCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <CheckChunkCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::CheckChunk(decoded));
             }
-            if let Ok(decoded)
-                = <CheckChunksCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <CheckChunksCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::CheckChunks(decoded));
             }
-            if let Ok(decoded)
-                = <ChunksLengthCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <ChunksLengthCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::ChunksLength(decoded));
             }
-            if let Ok(decoded)
-                = <CreateUserCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <CreateUserCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::CreateUser(decoded));
             }
-            if let Ok(decoded)
-                = <DeleteUserCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <DeleteUserCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::DeleteUser(decoded));
             }
-            if let Ok(decoded)
-                = <DepositCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <DepositCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Deposit(decoded));
             }
-            if let Ok(decoded)
-                = <DistributeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <DistributeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Distribute(decoded));
             }
-            if let Ok(decoded)
-                = <DistributionsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <DistributionsCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::Distributions(decoded));
             }
-            if let Ok(decoded)
-                = <EditDescriptionCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) =
+                <EditDescriptionCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::EditDescription(decoded));
             }
-            if let Ok(decoded)
-                = <EditFeeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <EditFeeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::EditFee(decoded));
             }
-            if let Ok(decoded)
-                = <EditPriceCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <EditPriceCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::EditPrice(decoded));
             }
-            if let Ok(decoded)
-                = <EditServerInfoCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) =
+                <EditServerInfoCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::EditServerInfo(decoded));
             }
-            if let Ok(decoded)
-                = <GenDistributionIdCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <GenDistributionIdCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::GenDistributionId(decoded));
             }
-            if let Ok(decoded)
-                = <GenSongIdCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <GenSongIdCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::GenSongId(decoded));
             }
-            if let Ok(decoded)
-                = <GetChunksCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <GetChunksCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::GetChunks(decoded));
             }
-            if let Ok(decoded)
-                = <GetRandDistributorCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <GetRandDistributorCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::GetRandDistributor(decoded));
             }
-            if let Ok(decoded)
-                = <GetSongsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <GetSongsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::GetSongs(decoded));
             }
-            if let Ok(decoded)
-                = <ManageValidatorsCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <ManageValidatorsCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::ManageValidators(decoded));
             }
-            if let Ok(decoded)
-                = <SongListCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <SongListCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::SongList(decoded));
             }
-            if let Ok(decoded)
-                = <SongListLengthCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) =
+                <SongListLengthCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::SongListLength(decoded));
             }
-            if let Ok(decoded)
-                = <SongsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <SongsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Songs(decoded));
             }
-            if let Ok(decoded)
-                = <UndistributeCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <UndistributeCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::Undistribute(decoded));
             }
-            if let Ok(decoded)
-                = <UploadSongCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <UploadSongCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::UploadSong(decoded));
             }
-            if let Ok(decoded)
-                = <UsersCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <UsersCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Users(decoded));
             }
-            if let Ok(decoded)
-                = <WithdrawCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <WithdrawCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Withdraw(decoded));
             }
-            if let Ok(decoded)
-                = <WithdrawWithAmountCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <WithdrawWithAmountCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::WithdrawWithAmount(decoded));
             }
             Err(::ethers::core::abi::Error::InvalidData.into())
@@ -893,73 +883,33 @@ pub mod tangle_tunes_abi {
     impl ::ethers::core::abi::AbiEncode for TangleTunesAbiCalls {
         fn encode(self) -> Vec<u8> {
             match self {
-                Self::CheckChunk(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::CheckChunks(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::ChunksLength(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::CreateUser(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::DeleteUser(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::CheckChunk(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::CheckChunks(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::ChunksLength(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::CreateUser(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::DeleteUser(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::Deposit(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::Distribute(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::Distributions(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::EditDescription(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::Distribute(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::Distributions(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::EditDescription(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::EditFee(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::EditPrice(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::EditServerInfo(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::GenDistributionId(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::GenSongId(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::GetChunks(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::EditPrice(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::EditServerInfo(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::GenDistributionId(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::GenSongId(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::GetChunks(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::GetRandDistributor(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
-                Self::GetSongs(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::ManageValidators(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::SongList(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::SongListLength(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::GetSongs(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::ManageValidators(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::SongList(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::SongListLength(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::Songs(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::Undistribute(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::UploadSong(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::Undistribute(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::UploadSong(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::Users(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::Withdraw(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::Withdraw(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::WithdrawWithAmount(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
@@ -984,9 +934,7 @@ pub mod tangle_tunes_abi {
                 Self::GenDistributionId(element) => ::core::fmt::Display::fmt(element, f),
                 Self::GenSongId(element) => ::core::fmt::Display::fmt(element, f),
                 Self::GetChunks(element) => ::core::fmt::Display::fmt(element, f),
-                Self::GetRandDistributor(element) => {
-                    ::core::fmt::Display::fmt(element, f)
-                }
+                Self::GetRandDistributor(element) => ::core::fmt::Display::fmt(element, f),
                 Self::GetSongs(element) => ::core::fmt::Display::fmt(element, f),
                 Self::ManageValidators(element) => ::core::fmt::Display::fmt(element, f),
                 Self::SongList(element) => ::core::fmt::Display::fmt(element, f),
@@ -996,9 +944,7 @@ pub mod tangle_tunes_abi {
                 Self::UploadSong(element) => ::core::fmt::Display::fmt(element, f),
                 Self::Users(element) => ::core::fmt::Display::fmt(element, f),
                 Self::Withdraw(element) => ::core::fmt::Display::fmt(element, f),
-                Self::WithdrawWithAmount(element) => {
-                    ::core::fmt::Display::fmt(element, f)
-                }
+                Self::WithdrawWithAmount(element) => ::core::fmt::Display::fmt(element, f),
             }
         }
     }
@@ -1141,7 +1087,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct CheckChunkReturn(pub bool);
     ///Container type for all return fields from the `check_chunks` function with signature `check_chunks(bytes32,uint256,uint256)` and selector `0xdc70c749`
@@ -1153,7 +1099,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct CheckChunksReturn(pub ::std::vec::Vec<[u8; 32]>);
     ///Container type for all return fields from the `chunks_length` function with signature `chunks_length(bytes32)` and selector `0x6a604ceb`
@@ -1165,7 +1111,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct ChunksLengthReturn(pub ::ethers::core::types::U256);
     ///Container type for all return fields from the `distributions` function with signature `distributions(bytes32)` and selector `0xdd0e6215`
@@ -1177,7 +1123,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct DistributionsReturn {
         pub exists: bool,
@@ -1193,7 +1139,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct GenDistributionIdReturn(pub [u8; 32]);
     ///Container type for all return fields from the `gen_song_id` function with signature `gen_song_id(string,address)` and selector `0x1ea09895`
@@ -1205,7 +1151,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct GenSongIdReturn(pub [u8; 32]);
     ///Container type for all return fields from the `get_rand_distributor` function with signature `get_rand_distributor(bytes32)` and selector `0xdddf41b3`
@@ -1217,7 +1163,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct GetRandDistributorReturn(
         pub ::ethers::core::types::Address,
@@ -1232,7 +1178,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct GetSongsReturn(pub ::std::vec::Vec<SongListing>);
     ///Container type for all return fields from the `song_list` function with signature `song_list(uint256)` and selector `0x5c348f6d`
@@ -1244,7 +1190,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct SongListReturn(pub [u8; 32]);
     ///Container type for all return fields from the `song_list_length` function with signature `song_list_length()` and selector `0x2f516ee8`
@@ -1256,7 +1202,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct SongListLengthReturn(pub ::ethers::core::types::U256);
     ///Container type for all return fields from the `songs` function with signature `songs(bytes32)` and selector `0x3095ff4e`
@@ -1268,7 +1214,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct SongsReturn {
         pub exists: bool,
@@ -1287,7 +1233,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct UsersReturn {
         pub exists: bool,
@@ -1306,7 +1252,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct L1Address {
         pub data: ::ethers::core::types::Bytes,
@@ -1320,7 +1266,7 @@ pub mod tangle_tunes_abi {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct SongListing {
         pub song_id: [u8; 32],

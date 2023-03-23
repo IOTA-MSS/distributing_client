@@ -1,5 +1,5 @@
-use std::{error::Error, fs::File};
 use ethers::prelude::Abigen;
+use std::{error::Error, fs::File};
 
 fn main() -> Result<(), Box<dyn Error>> {
     const FILE: &str = "src/library/abi/generated.rs";

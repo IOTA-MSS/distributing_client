@@ -3,14 +3,8 @@ use crate::{
     library::{app::AppData, util::SongId},
 };
 use chrono::{DateTime, Utc};
-use color_eyre::Report;
-use futures::stream::PeekMut;
 use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashMap, VecDeque},
-    convert::Infallible,
-    sync::Mutex,
-    time::Duration,
+    cmp::Reverse, collections::BinaryHeap, convert::Infallible, sync::Mutex, time::Duration,
 };
 use tokio::{
     sync::oneshot,
@@ -24,7 +18,8 @@ const POLL_INTERVAL: Duration = Duration::from_secs(10);
 pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infallible {
     println!("Auto-distributor spawned");
 
-    let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + POLL_INTERVAL, POLL_INTERVAL);
+    let mut interval =
+        tokio::time::interval_at(tokio::time::Instant::now() + POLL_INTERVAL, POLL_INTERVAL);
     interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
     let mut last_distribution = Utc::now();
 

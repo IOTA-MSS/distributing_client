@@ -18,7 +18,7 @@ use ethers::types::Bytes;
 use ethers_providers::StreamExt;
 use eyre::Context;
 use futures::SinkExt;
-use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, pin, time::Duration};
+use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
     time::sleep,

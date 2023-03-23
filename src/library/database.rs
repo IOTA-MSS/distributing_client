@@ -1,8 +1,7 @@
-use crate::arguments::Arguments;
 use crate::library::util::SongId;
 use crate::BYTES_PER_CHUNK;
-use chrono::{DateTime, Local, Utc};
-use ethers::utils::serialize;
+use chrono::{DateTime, Utc};
+
 use futures::executor::block_on;
 use once_cell::sync::OnceCell;
 use sqlx::pool::PoolConnection;
@@ -10,7 +9,6 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, Sqlite};
 use std::fmt::Debug;
 use std::path::Path;
-use std::time::Duration;
 
 static DATABASE_POOL: OnceCell<Pool<Sqlite>> = OnceCell::new();
 #[derive(Debug, Clone, Copy)]
@@ -249,7 +247,6 @@ impl Database {
         .map(|(id,)| id))
     }
 
-
     pub async fn remove_song(&self, id: &SongId) -> eyre::Result<bool> {
         let res = sqlx::query(
             "
@@ -308,21 +305,6 @@ mod test {
     use crate::{test, BYTES_PER_CHUNK_USIZE};
 
     use super::*;
-
-    impl Database {
-        async fn drop_tables(&self) -> eyre::Result<()> {
-            sqlx::query(
-                "
-        DROP TABLE songs;
-        DROP TABLE key;
-        ",
-            )
-            .execute(&mut self.acquire().await?)
-            .await?;
-
-            Ok(())
-        }
-    }
 
     #[tokio::test]
     async fn chunking_is_correct() -> eyre::Result<()> {

@@ -149,7 +149,6 @@ impl TangleTunesClient {
 mod test {
     use ethers::abi::Address;
     use futures::stream::FuturesUnordered;
-    // use hex::FromHex;
 
     use crate::library::{
         app::AppData,
@@ -170,7 +169,7 @@ mod test {
         let app: &'static AppData = AppData::init_for_test(None, false).await?;
 
         let results = FuturesUnordered::new();
-        for i in 0..100 {
+        for _i in 0..100 {
             results.push(
                 dbg!(
                     app.client
@@ -187,6 +186,7 @@ mod test {
         Ok(())
     }
 
+    #[allow(unused)]
     async fn send_funds_to(address: &Address, amount: u64) -> std::process::Output {
         tokio::process::Command::new("wasp-cli")
             .arg("chain")

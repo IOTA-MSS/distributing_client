@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(clap::Parser, Debug, Clone, Serialize, Deserialize)]
 #[command(
@@ -42,7 +42,7 @@ pub enum Command {
     Distribute {
         /// Automatically download and distribute songs from other distributors
         #[arg(long)]
-        auto_download: bool
+        auto_download: bool,
     },
 }
 
@@ -124,7 +124,7 @@ pub enum SongIndexCommand {
     /// Reset the list of songs from the smart-contract
     Reset {
         #[arg(long)]
-        no_update: bool
+        no_update: bool,
     },
 
     /// List all songs
@@ -138,8 +138,8 @@ pub enum SongIndexCommand {
 
         /// The ids of the songs to be downloaded
         #[arg(long)]
-        index: Option<Vec<usize>>
-    }
+        index: Option<Vec<usize>>,
+    },
 }
 
 #[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
@@ -168,7 +168,7 @@ pub enum SongsCommand {
 
         /// The distributor address
         #[arg(long)]
-        distributor_address: String
+        distributor_address: String,
     },
 
     /// Download a song from a random distributor
@@ -179,14 +179,13 @@ pub enum SongsCommand {
 
         /// The file to download to
         #[arg(long)]
-        to_file: Option<String>
+        to_file: Option<String>,
     },
 
     /// Add a song from the file-system
     Add {
         /// The paths to find the songs stored as "{(0x)0AC..34}.mp3"
         paths: Vec<String>,
-
         // /// Do not distribute this song
         // #[arg(long, short)]
         // no_distribute: bool,

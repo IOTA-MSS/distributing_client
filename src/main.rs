@@ -7,8 +7,6 @@ use library::{app::AppData, crypto, database::Database};
 use tokio::runtime::Runtime;
 #[macro_use]
 extern crate eyre;
-#[macro_use]
-extern crate tracing;
 
 mod arguments;
 mod config;
@@ -111,8 +109,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 index: indexes,
             } => command::song_index::download(app, amount, indexes).await,
         },
-    };
-    Ok(())
+    }
 }
 
 const BYTES_PER_CHUNK: u32 = 32_500;
