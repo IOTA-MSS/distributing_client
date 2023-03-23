@@ -21,11 +21,10 @@ impl TangleTunesClient {
         &self,
         song: SongId,
     ) -> Result<(Address, String), TTCallError> {
-        Ok(self
-            .abi_client
+        self.abi_client
             .get_rand_distributor(song.into())
             .set_defaults()
-            .await?)
+            .await
     }
 
     pub async fn call_get_song_info(&self, song_id: SongId) -> Result<SongInfo, TTCallError> {

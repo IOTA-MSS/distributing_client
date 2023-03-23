@@ -41,10 +41,10 @@ impl ConfigFile {
     }
 
     pub fn from_path(path: &str) -> eyre::Result<Self> {
-        Ok(toml::from_str(
+        toml::from_str(
             &std::fs::read_to_string(path)
                 .wrap_err(format!("Config does not exist at path {:?}", path))?,
         )
-        .wrap_err(format!("Could not parse config file at path {:?}", path))?)
+        .wrap_err(format!("Could not parse config file at path {:?}", path))
     }
 }

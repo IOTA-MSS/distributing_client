@@ -7,7 +7,7 @@ pub async fn create(
 ) -> eyre::Result<()> {
     println!("Creating user...");
     app.client
-        .create_user_call(name, description.unwrap_or("".to_string()))
+        .create_user_call(name, description.unwrap_or(String::new()))
         .send()
         .await?
         .await?

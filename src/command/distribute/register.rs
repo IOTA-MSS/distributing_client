@@ -1,10 +1,10 @@
 use std::time::Duration;
 
+use crate::library::{app::AppData, util::TransactionReceiptExt};
 use color_eyre::Report;
 use ethers_providers::StreamExt;
 use futures::stream::FuturesUnordered;
 use tokio::time::sleep;
-use crate::library::{app::AppData, util::TransactionReceiptExt};
 
 /// Registers for distribution of all songs in the database.
 /// If an error occurs, all songs are automatically deregistered.

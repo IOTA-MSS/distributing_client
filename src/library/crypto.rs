@@ -53,9 +53,9 @@ pub fn encrypt_private_key(secret_key: &str, password: &str) -> String {
 
 /// Encrypt the encrypted secret key with the password to a hex-encoded secret key.
 pub fn decrypt_private_key(encrypted_key: &str, password: &str) -> eyre::Result<String> {
-    Ok(new_magic_crypt!(password, 256)
+    new_magic_crypt!(password, 256)
         .decrypt_base64_to_string(encrypted_key)
-        .wrap_err("Incorrect password")?)
+        .wrap_err("Incorrect password")
 }
 
 #[cfg(test)]
