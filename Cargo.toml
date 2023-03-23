@@ -39,9 +39,7 @@ ctrlc = { version = "3.2.5", features = [] }
 async-trait = "0.1.66"
 thiserror = "1.0.39"
 chrono = "0.4.24"
-sha3 = "0.10.6"
 rand = "0.8.5"
-interprocess = { version = "1.2.1", features = ["tokio_support"] }
 
 [build-dependencies]
 ethers = "2.0"

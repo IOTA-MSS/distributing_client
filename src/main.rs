@@ -94,9 +94,14 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
             }
             AccountCommand::Delete => command::account::delete(app).await,
         },
-        Command::Distribute { auto_download } => command::distribute::run_distribute(app, auto_download).await,
+        Command::Distribute { auto_download } => {
+            command::distribute::run_distribute(app, auto_download).await
+        }
         Command::SongIndex(command) => match command {
-            SongIndexCommand::Update => command::song_index::update(app).await,
+            SongIndexCommand::Update => {
+                command::song_index::update(app).await?;
+                Ok(())
+            }
             SongIndexCommand::Reset { no_update } => {
                 command::song_index::reset(app, !no_update).await
             }
@@ -106,7 +111,8 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 index: indexes,
             } => command::song_index::download(app, amount, indexes).await,
         },
-    }
+    };
+    Ok(())
 }
 
 const BYTES_PER_CHUNK: u32 = 32_500;

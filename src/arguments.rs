@@ -30,11 +30,11 @@ pub enum Command {
     #[command(subcommand)]
     Account(AccountCommand),
 
-    /// Manage your songs
+    /// Manage your downloaded songs
     #[command(subcommand)]
     Songs(SongsCommand),
 
-    /// Manage the local copy of the song-list
+    /// Manage the local song-index
     #[command(subcommand)]
     SongIndex(SongIndexCommand),
 

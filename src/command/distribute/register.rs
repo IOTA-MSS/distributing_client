@@ -14,7 +14,7 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
 
     // Send all transactions until complete or an error is encountered
     let sending_txs_result = {
-        for song_id in app.database.get_all_song_ids().await? {
+        for song_id in app.database.get_all_downloaded_song_ids().await? {
             println!(
                 "Registering for distribution of song {song_id} with nonce {}...",
                 app.client.get_nonce().await?
@@ -65,7 +65,7 @@ pub async fn register_for_songs(app: &AppData) -> eyre::Result<()> {
 pub async fn deregister_for_songs(app: &AppData) -> eyre::Result<()> {
     let mut pending_transactions = FuturesUnordered::new();
 
-    for song_id in app.database.get_all_song_ids().await? {
+    for song_id in app.database.get_all_downloaded_song_ids().await? {
         let result = {
             println!("Deregistering song {song_id} on the smart-contract..");
             let tx_hash = app

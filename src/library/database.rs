@@ -224,7 +224,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_all_song_ids(&self) -> eyre::Result<Vec<SongId>> {
+    pub async fn get_all_downloaded_song_ids(&self) -> eyre::Result<Vec<SongId>> {
         Ok(sqlx::query_as::<_, (Vec<u8>,)>(
             "
             SELECT id FROM songs;
@@ -397,25 +397,25 @@ mod test {
         let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.get_all_song_ids().await?.len(), 0);
+        assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 0);
 
         let song_data = std::fs::read(
             "mp3/0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf.mp3",
         )?;
         db.add_song(&unvalidated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_all_song_ids().await?.len(), 1);
+        assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 1);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
         )?;
         db.add_song(&validated_song_id, &song_data).await?;
 
-        assert_eq!(db.get_all_song_ids().await?.len(), 2);
+        assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 2);
 
         assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
 
-        assert_eq!(db.get_all_song_ids().await?.len(), 1);
+        assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 1);
 
         Ok(())
     }

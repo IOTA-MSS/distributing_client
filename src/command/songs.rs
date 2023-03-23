@@ -53,7 +53,7 @@ pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> 
 
 pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
     println!("Songs stored locally:");
-    for song_id in app.database.get_all_song_ids().await? {
+    for song_id in app.database.get_all_downloaded_song_ids().await? {
         let index = match app.database.get_index_by_song_id(&song_id).await? {
             Some(index) => format!("index: {index}"),
             None => "index not found".to_string(),

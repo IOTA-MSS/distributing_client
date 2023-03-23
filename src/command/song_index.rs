@@ -1,7 +1,7 @@
-use crate::{library::app::AppData, command};
+use crate::{library::{app::AppData, util::SongId}, command};
 use rand::{seq::IteratorRandom, thread_rng};
 
-pub async fn update(app: &'static AppData) -> eyre::Result<()> {
+pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>> {
     println!("Updating song index...");
     let index = app.database.get_next_song_index().await?;
     let new_ids = app.client.get_song_ids_from_index(index).await?;
@@ -10,7 +10,7 @@ pub async fn update(app: &'static AppData) -> eyre::Result<()> {
         println!("{i}: {id}");
     }
     app.database.add_to_song_index(&new_ids).await?;
-    Ok(())
+    Ok(new_ids)
 }
 
 pub async fn reset(app: &'static AppData, to_update: bool) -> eyre::Result<()> {
@@ -50,7 +50,7 @@ pub async fn download(
             mapped_indexes
         }
         (Some(amount), None) => {
-            let downloaded_song_ids = app.database.get_all_song_ids().await?;
+            let downloaded_song_ids = app.database.get_all_downloaded_song_ids().await?;
             app.database
                 .get_song_index()
                 .await?
