@@ -1,5 +1,6 @@
 use crate::{library::app::AppData, library::util::SongId, BYTES_PER_CHUNK_USIZE};
 use ethers::types::{Address, H160};
+use eyre::Context;
 use num_integer::div_ceil;
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
@@ -8,7 +9,19 @@ const ZERO_ADDRESS: Address = H160([0; 20]);
 pub async fn remove(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
     println!("Removing songs: {ids:?}\n");
     for id in &ids {
-        if cfg.database.remove_song(&SongId::try_from_hex(id)?).await? {
+        let song_id = match SongId::try_from_hex(id) {
+            Ok(song_id) => song_id,
+            Err(_) => cfg
+                .database
+                .get_song_id_by_index(
+                    id.parse()
+                        .wrap_err("Identifier was not a valid song-id or song-index")?,
+                )
+                .await?
+                .ok_or_else(|| eyre!("Song-index not found"))?,
+        };
+
+        if cfg.database.remove_song(&song_id).await? {
             println!("Succesfully removed song {id:?}");
         } else {
             println!("Song with id {id:?} does not exist, cannot be removed");
@@ -23,10 +36,10 @@ pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> 
     for path in paths {
         let path = PathBuf::from(path);
         let Some(ext) = path.extension() else {
-            bail!("File name must be {{song-id}}.mp3")
+            bail!("File name must be <SONG_ID>.mp3")
         };
         if ext != "mp3" {
-            bail!("File name must be {{song-id}}.mp3")
+            bail!("File name must be <SONG_ID>.mp3")
         }
         let data = std::fs::read(&path)?;
         let song_id = path.file_stem().unwrap().to_str().unwrap();
@@ -40,14 +53,12 @@ pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> 
 
 pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
     println!("Songs stored locally:");
-    for (i, song_id) in app
-        .database
-        .get_all_song_ids()
-        .await?
-        .into_iter()
-        .enumerate()
-    {
-        println!("{i}: {song_id}");
+    for song_id in app.database.get_all_song_ids().await? {
+        let index = match app.database.get_index_by_song_id(&song_id).await? {
+            Some(index) => format!("index: {index}"),
+            None => "index not found".to_string(),
+        };
+        println!("{song_id} - {index}");
     }
     Ok(())
 }
@@ -63,7 +74,6 @@ pub async fn download(
     let (distr_wallet_address, distr_socket_address) =
         app.client.call_get_rand_distributor(song_id).await?;
 
-    
     if distr_wallet_address == ZERO_ADDRESS {
         bail!("No distributor found for song {song_id}");
     }

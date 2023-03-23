@@ -16,7 +16,7 @@ use crate::{
 };
 use ethers::types::Bytes;
 use ethers_providers::StreamExt;
-use futures::{future::pending, SinkExt};
+use futures::{SinkExt};
 use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, pin, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},

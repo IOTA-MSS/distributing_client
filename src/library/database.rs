@@ -81,7 +81,7 @@ impl Database {
     pub async fn get_song_index(&self) -> eyre::Result<Vec<(usize, SongId)>> {
         Ok(sqlx::query_as::<_, (u32, Vec<u8>)>(
             "
-            SELECT idx, id from song_list;
+            SELECT idx, id FROM song_list;
             ",
         )
         .fetch_all(&mut self.acquire().await?)
@@ -98,7 +98,7 @@ impl Database {
                 // Check that previous one exists
                 let prev_index = sqlx::query_as::<_, (u32,)>(
                     "
-                    SELECT (idx) from song_list WHERE idx = ?1;
+                    SELECT (idx) FROM song_list WHERE idx = ?1;
                     ",
                 )
                 .bind((index - 1) as u32)
@@ -191,9 +191,7 @@ impl Database {
     }
 
     pub async fn get_new_songs(&self, since: &DateTime<Utc>) -> eyre::Result<Vec<SongId>> {
-        let date_time = since
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string();
+        let date_time = since.format("%Y-%m-%d %H:%M:%S").to_string();
 
         let row = sqlx::query_as::<_, (Vec<u8>,)>(
             "
@@ -227,7 +225,7 @@ impl Database {
     }
 
     pub async fn get_all_song_ids(&self) -> eyre::Result<Vec<SongId>> {
-        let row = sqlx::query_as::<_, (Vec<u8>,)>(
+        Ok(sqlx::query_as::<_, (Vec<u8>,)>(
             "
             SELECT id FROM songs;
             ",
@@ -236,10 +234,21 @@ impl Database {
         .await?
         .into_iter()
         .map(|(id,)| id.try_into().unwrap())
-        .collect();
-
-        Ok(row)
+        .collect())
     }
+
+    pub async fn get_index_by_song_id(&self, song_id: &SongId) -> eyre::Result<Option<u32>> {
+        Ok(sqlx::query_as::<_, (u32,)>(
+            "
+            SELECT idx FROM song_list WHERE id = ?1;
+            ",
+        )
+        .bind(song_id.as_ref())
+        .fetch_optional(&mut self.acquire().await?)
+        .await?
+        .map(|(id,)| id))
+    }
+
 
     pub async fn remove_song(&self, id: &SongId) -> eyre::Result<bool> {
         let res = sqlx::query(
@@ -296,7 +305,7 @@ impl Database {
 
 #[cfg(test)]
 mod test {
-    use crate::test;
+    use crate::{test, BYTES_PER_CHUNK_USIZE};
 
     use super::*;
 
@@ -326,24 +335,23 @@ mod test {
         db.add_song(&unvalidated_song_id, &song_data).await?;
 
         let chunks = db.get_chunks(&unvalidated_song_id, 0, 50).await?;
-        assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK as usize]);
+        assert_eq!(chunks, song_data[0..50 * BYTES_PER_CHUNK_USIZE]);
 
-        let chunks = db.get_chunks(&unvalidated_song_id, 0, 80).await?;
-        assert_eq!(chunks.len(), 2113939);
-        assert!(chunks.len() < 80 * BYTES_PER_CHUNK as usize);
+        let chunks = db.get_chunks(&unvalidated_song_id, 50, 100).await?;
+        assert_eq!(chunks, song_data[50 * BYTES_PER_CHUNK_USIZE..]);
 
         let chunks = db.get_chunks(&unvalidated_song_id, 10, 20).await?;
         assert_eq!(
             chunks,
-            song_data[10 * BYTES_PER_CHUNK as usize..30 * BYTES_PER_CHUNK as usize]
+            song_data[10 * BYTES_PER_CHUNK_USIZE..30 * BYTES_PER_CHUNK_USIZE]
         );
 
         let chunks = db.get_chunks(&unvalidated_song_id, 30, 50).await?;
         assert_eq!(
-            chunks[0..20 * BYTES_PER_CHUNK as usize],
-            song_data[30 * BYTES_PER_CHUNK as usize..50 * BYTES_PER_CHUNK as usize]
+            chunks[0..20 * BYTES_PER_CHUNK_USIZE],
+            song_data[30 * BYTES_PER_CHUNK_USIZE..50 * BYTES_PER_CHUNK_USIZE]
         );
-        assert!(chunks.len() < 50 * BYTES_PER_CHUNK as usize);
+        assert!(chunks.len() < 50 * BYTES_PER_CHUNK_USIZE);
 
         Ok(())
     }

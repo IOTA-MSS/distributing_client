@@ -72,7 +72,7 @@ impl TangleTunesClient {
         &self,
         index: usize,
     ) -> eyre::Result<Vec<(usize, SongId)>> {
-        let last_index = self.call_song_list_length().await?.as_usize() - 1;
+        let last_index = self.call_song_list_length().await?.as_usize();
 
         if index < last_index {
             let mut song_ids = Vec::with_capacity(last_index - index);

@@ -17,7 +17,7 @@ pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infa
 
     loop {
         interval.tick().await;
-        println!("Interval completed now");
+        tokio::time::sleep(Duration::from_secs(10)).await;
 
         if auto_download {
             if let Err(e) = download_new_songs(app).await {

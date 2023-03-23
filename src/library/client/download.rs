@@ -26,7 +26,7 @@ impl TangleTunesClient {
         song_id: SongId,
         song_data: &[u8],
         first_chunk_id: usize,
-    ) -> eyre::Result<bool> {
+    ) -> eyre::Result<()> {
         let chunks = div_ceil(song_data.len(), BYTES_PER_CHUNK_USIZE);
         let contract_hashes = self
             .call_check_chunks(song_id, first_chunk_id, chunks)
@@ -39,9 +39,15 @@ impl TangleTunesClient {
         assert_eq!(calculated_hashes.len(), chunks);
 
         if contract_hashes == calculated_hashes {
-            Ok(true)
+            Ok(())
         } else {
-            Ok(false)
+            Err(eyre!(
+                "
+            Chunks could not be verified:
+            - Expected: {calculated_hashes:?}
+            - Got:      {contract_hashes:?}
+            "
+            ))
         }
     }
 
@@ -68,7 +74,7 @@ impl TangleTunesClient {
         while !song_is_complete(&song, chunk_amount) {
             // .. send requests if necessary
             while let Some((request_id, request_size)) = request_queue.request_now(&song) {
-                println!("Requesting {request_size} chunks starting at id {request_id}");
+                println!("Requesting chunks {request_id} to {}", request_id + request_size - 1);
 
                 let tx_rlp = self
                     .create_get_chunks_signed_rlp(
@@ -86,16 +92,8 @@ impl TangleTunesClient {
             self.write_next_chunks_to_buffer(&mut read_stream, &mut song, &song_id)
                 .await?
         }
-
-        if self
-            .verify_chunks_against_smart_contract(song_id, &song, first_chunk_id)
-            .await?
-        {
-            println!("Verification of song hashes successful!");
-            Ok(song)
-        } else {
-            Err(eyre!("Song verification failed"))
-        }
+        println!("Song downloaded and verified!");
+        Ok(song)
     }
 
     /// Reads the next chunk from the stream and adds them to the buffer.
@@ -121,12 +119,13 @@ impl TangleTunesClient {
             );
             buffer.extend(chunk);
         }
-        self.verify_chunks_against_smart_contract(
-            *song_id,
-            &buffer[init_len..],
-            start_chunk_id as usize,
-        )
-        .await?;
+        self
+            .verify_chunks_against_smart_contract(
+                *song_id,
+                &buffer[init_len..],
+                start_chunk_id as usize,
+            )
+            .await?;
         Ok(())
     }
 }
@@ -191,11 +190,11 @@ mod test {
         let app = AppData::init_for_test(None, false).await?;
         let song_id = VALIDATED_SONG_HEX_ID.parse()?;
         let chunks = app.database.get_chunks(&song_id, 0, 20).await?;
-        assert!(
-            app.client
-                .verify_chunks_against_smart_contract(song_id, &chunks, 0)
-                .await?
-        );
+        assert!(app
+            .client
+            .verify_chunks_against_smart_contract(song_id, &chunks, 0)
+            .await
+            .is_ok());
         Ok(())
     }
 
