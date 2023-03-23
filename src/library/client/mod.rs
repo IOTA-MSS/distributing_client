@@ -104,6 +104,7 @@ impl TangleTunesClient {
             tx.set_gas_price(1);
             tx
         };
+        println!("Tx nonce: {}", tx.nonce().unwrap());
         let signature = self.wallet().sign_transaction_sync(&tx);
         Ok(tx.rlp_signed(&signature))
     }

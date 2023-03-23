@@ -11,12 +11,13 @@ use crate::{
         app::AppData,
         tcp::{RequestChunksDecoder, SendChunksEncoder},
         transaction_pool::TransactionPool,
-        util::TransactionReceiptExt,
+        util::{SongId, TransactionReceiptExt},
     },
 };
 use ethers::types::Bytes;
 use ethers_providers::StreamExt;
-use futures::{SinkExt};
+use eyre::Context;
+use futures::SinkExt;
 use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, pin, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -91,7 +92,7 @@ pub async fn accept_tcp_connections(
         tokio::task::spawn(async move {
             match handle_new_listener(&mut stream, addr, app).await {
                 Ok(()) => (),
-                Err(e) => println!("Handler of {addr} exited with error {e}."),
+                Err(e) => println!("Handler {addr} exited with error {e}."),
             }
         });
     }
@@ -112,13 +113,13 @@ async fn handle_new_listener(
     // Queue of client chunk-requests
     let mut open_requests: VecDeque<GetChunksCall> = VecDeque::new();
     // The transactions that resolves to the amount of credit.
-    let mut transaction_pool = TransactionPool::new(&app.client, Duration::from_millis(100), 5);
+    let mut transaction_pool = TransactionPool::new(&app.client, Duration::from_millis(100), 7);
 
     'outer: loop {
         let tcp_msg = tokio::select! {
             Some(result) = transaction_pool.next() => {
                 let (receipt, new_credit) = result?;
-                receipt.status_is_ok("")?;
+                receipt.status_is_ok("").wrap_err(format!("From request-chunks transaction of {addr}"))?;
                 credit = credit.checked_add(new_credit).unwrap();
                 None
             }
@@ -134,10 +135,11 @@ async fn handle_new_listener(
         };
 
         if let Some(tcp_msg) = tcp_msg {
-            let tx = match tcp_msg {
-                Ok(tx) => Bytes(tx.freeze()),
-                Err(e) => bail!("Incorrect tcp-protocol: {e}"),
-            };
+            let tx = Bytes(
+                tcp_msg
+                    .wrap_err(format!("Custom tcp-protocol not folowed by {addr}"))?
+                    .freeze(),
+            );
 
             let params = app.client.decode_get_chunks_params(&tx)?;
             if params.distributor != app.client.wallet_address() {
@@ -147,6 +149,14 @@ async fn handle_new_listener(
                     app.client.wallet_address()
                 )
             }
+
+            println!(
+                "Received get-chunks from {} for song {} with index {} and amount {}",
+                addr,
+                SongId::from(params.song),
+                params.index,
+                params.amount
+            );
 
             // And push the request and pending transaction to the lists.
             transaction_pool.push_raw_tx(tx, params.amount.as_u128().try_into()?);
@@ -185,7 +195,7 @@ async fn handle_new_listener(
                 .get_chunks(&params.song.into(), index, amount)
                 .await?;
 
-            println!("Sending {amount} chunks starting at {index} over TCP.");
+            println!("Sending {amount} chunks starting at {index} to {addr}.");
             tcp_writer.send((index as u32, &chunks.into())).await?;
         }
     }

@@ -21,19 +21,16 @@ impl Decoder for RequestChunksDecoder {
     type Error = eyre::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        println!("Incoming tcp-packet...");
         if self.body_len.is_none() {
             if src.len() < 4 {
                 return Ok(None);
             }
-            let bytes = src.split_to(4).as_ref().try_into().unwrap();
+            let bytes = src.split_to(4).as_ref().try_into()?;
             self.body_len = Some(u32::from_le_bytes(bytes));
-            println!("Body length decoded. It is is: {}", self.body_len.unwrap());
         }
 
         let body_len = self.body_len.unwrap() as usize;
         if src.len() < body_len {
-            println!("Error: Body was smaller than the length {body_len} decoded");
             return Ok(None);
         }
 

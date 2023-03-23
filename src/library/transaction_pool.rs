@@ -2,6 +2,7 @@ use std::{collections::VecDeque, time::Duration};
 
 use ethers::types::{Bytes, TransactionReceipt};
 use ethers_providers::{Http, PendingTransaction, StreamExt};
+use eyre::Context;
 use futures::{future::BoxFuture, stream::FuturesUnordered};
 use tokio::time::sleep;
 
@@ -81,7 +82,7 @@ impl<T: std::fmt::Debug + Send + 'static> TransactionPool<T> {
                         break;
                     }
                     Err(new_err) => match result {
-                        Some(Err(err)) => result = Some(Err(err.wrap_err(new_err))),
+                        Some(Err(err)) => result = Some(Err(err)),
                         None => result = Some(Err(new_err)),
                         Some(Ok(_)) => unreachable!(),
                     },
@@ -89,7 +90,9 @@ impl<T: std::fmt::Debug + Send + 'static> TransactionPool<T> {
                 sleep(timeout * 2_u32.saturating_pow(attempt)).await;
             }
 
-            let pending_tx = result.expect("const ATTEMPTS > 0")?;
+            let pending_tx = result
+                .expect("attempts > 0")
+                .wrap_err(format!("Sending the transaction failed {attempts} times"))?;
             Ok((pending_tx, val))
         }));
     }

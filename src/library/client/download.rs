@@ -1,6 +1,5 @@
 use crate::{
     library::{
-        app::AppData,
         client::TangleTunesClient,
         tcp::{RequestChunksEncoder, SendChunksDecoder},
         util::SongId,
@@ -16,8 +15,8 @@ use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
-const CHUNKS_PER_REQUEST: usize = 20;
-const CONCURRENT_REQUESTS: usize = 3;
+const CHUNKS_PER_REQUEST: usize = 10;
+const CONCURRENT_REQUESTS: usize = 2;
 
 impl TangleTunesClient {
     /// Downloads the chunks from the smart-contract and verifies them against the given song-data.
@@ -27,16 +26,16 @@ impl TangleTunesClient {
         song_data: &[u8],
         first_chunk_id: usize,
     ) -> eyre::Result<()> {
-        let chunks = div_ceil(song_data.len(), BYTES_PER_CHUNK_USIZE);
+        let amount = div_ceil(song_data.len(), BYTES_PER_CHUNK_USIZE);
         let contract_hashes = self
-            .call_check_chunks(song_id, first_chunk_id, chunks)
+            .call_check_chunks(song_id, first_chunk_id, amount)
             .await?;
         let calculated_hashes = song_data
             .chunks(BYTES_PER_CHUNK_USIZE)
             .map(keccak256)
             .map(Into::into)
             .collect::<Vec<SongId>>();
-        assert_eq!(calculated_hashes.len(), chunks);
+        assert_eq!(calculated_hashes.len(), amount);
 
         if contract_hashes == calculated_hashes {
             Ok(())
@@ -74,7 +73,10 @@ impl TangleTunesClient {
         while !song_is_complete(&song, chunk_amount) {
             // .. send requests if necessary
             while let Some((request_id, request_size)) = request_queue.request_now(&song) {
-                println!("Requesting chunks {request_id} to {}", request_id + request_size - 1);
+                println!(
+                    "Requesting chunks {request_id} to {}",
+                    request_id + request_size - 1
+                );
 
                 let tx_rlp = self
                     .create_get_chunks_signed_rlp(
@@ -119,13 +121,12 @@ impl TangleTunesClient {
             );
             buffer.extend(chunk);
         }
-        self
-            .verify_chunks_against_smart_contract(
-                *song_id,
-                &buffer[init_len..],
-                start_chunk_id as usize,
-            )
-            .await?;
+        self.verify_chunks_against_smart_contract(
+            *song_id,
+            &buffer[init_len..],
+            start_chunk_id as usize,
+        )
+        .await?;
         Ok(())
     }
 }
@@ -160,10 +161,12 @@ impl RequestQueue {
 
     /// Whether a new request should be made now.
     ///
-    /// Returns (chunk_id, amount_of_chunks).
+    /// Returns (index, amount).
     pub fn request_now(&mut self, song: &[u8]) -> Option<(usize, usize)> {
-        if let Some((request_id, _)) = self.0.last() {
-            if *request_id <= (song.len() * BYTES_PER_CHUNK_USIZE) + CONCURRENT_REQUESTS {
+        const BYTES_AHEAD: usize = CONCURRENT_REQUESTS * CHUNKS_PER_REQUEST * BYTES_PER_CHUNK_USIZE;
+
+        if let Some((index, _)) = self.0.last() {
+            if (*index * BYTES_PER_CHUNK_USIZE) <= (song.len() + BYTES_AHEAD) {
                 return Some(self.0.pop().unwrap());
             }
         };
