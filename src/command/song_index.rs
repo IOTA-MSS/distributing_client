@@ -6,7 +6,6 @@ use ethers::types::U256;
 use rand::{seq::IteratorRandom, thread_rng};
 
 pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>> {
-    println!("Updating song index...");
     let index = app.database.get_next_song_index().await?;
     let new_ids = app.client.get_song_ids_from_index(index).await?;
     println!("New songs:");

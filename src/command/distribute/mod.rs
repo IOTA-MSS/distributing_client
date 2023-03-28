@@ -51,19 +51,25 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
     println!("Registering for all songs in database..");
     let result = match register_for_songs(app).await {
         Ok(()) => {
+            let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, auto_download));
+
             tokio::select! {
                 // The ctrl-c exit-handler
                 _ = &mut exit_listener => {
+                    auto_distributor.abort();
+                    let _ = auto_distributor.await;
                     Ok(())
                 }
 
                 // The auto-distribute task
-                res = tokio::task::spawn(self::auto_distribute(app, auto_download)) => {
+                res = &mut auto_distributor => {
                     Err(res.unwrap_err().into())
                 }
 
                 // The main process that handles incoming connections
                 res = accept_tcp_connections(listener, app) => {
+                    auto_distributor.abort();
+                    let _ = auto_distributor.await;
                     match res {
                         Err(e) => Err(e),
                         Ok(_) => unreachable!()
