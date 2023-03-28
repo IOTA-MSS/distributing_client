@@ -1,3 +1,5 @@
+use super::util::div_ceil_u256;
+use crate::BYTES_PER_CHUNK_USIZE;
 use ethers::{abi::Address, types::U256};
 
 mod generated;
@@ -12,6 +14,12 @@ pub struct SongInfo {
     pub price: U256,
     pub len: U256,
     pub duration: U256,
+}
+
+impl SongInfo {
+    pub fn total_price(&self) -> U256 {
+        self.price * div_ceil_u256(self.len, BYTES_PER_CHUNK_USIZE.into())
+    }
 }
 
 impl From<(bool, Address, String, U256, U256, U256)> for SongInfo {

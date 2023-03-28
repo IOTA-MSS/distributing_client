@@ -13,6 +13,7 @@ pub struct ConfigFile {
     pub fee: u32,
     pub server_address: String,
     pub bind_address: String,
+    pub max_price: Option<u128>
 }
 
 impl ConfigFile {
@@ -37,6 +38,7 @@ impl ConfigFile {
             password,
             server_address: self.server_address.parse()?,
             bind_address: self.bind_address.parse()?,
+            max_price_iota: self.max_price,
         })
     }
 

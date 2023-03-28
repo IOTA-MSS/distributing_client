@@ -1,9 +1,15 @@
+use ethers::types::U256;
+
 use crate::library::{
     client::TangleTunesClient,
     crypto::{self, Wallet},
     database::Database,
 };
 use std::{fmt::Debug, net::SocketAddr, path::PathBuf};
+
+use super::client::WEI_PER_IOTA;
+
+const DEFAULT_MAX_PRICE: u128 = WEI_PER_IOTA * 1_000_000; // 1 million iota
 
 #[derive(Debug)]
 pub struct AppData {
@@ -12,11 +18,12 @@ pub struct AppData {
     pub node_url: String,
     pub database_path: PathBuf,
     pub chain_id: u16,
-    pub fee: u32,
+    pub fee: U256,
     pub database: Database,
     pub client: TangleTunesClient,
     pub server_address: SocketAddr,
     pub bind_address: SocketAddr,
+    pub max_price_wei: U256,
 }
 
 impl AppData {
@@ -44,6 +51,7 @@ pub struct AppDataBuilder {
     pub password: Option<String>,
     pub server_address: SocketAddr,
     pub bind_address: SocketAddr,
+    pub max_price_iota: Option<u128>,
 }
 
 impl AppDataBuilder {
@@ -75,6 +83,11 @@ impl AppDataBuilder {
         let client =
             TangleTunesClient::initialize(wallet, &self.node_url, &self.contract_address).await?;
 
+        let max_price_wei = match self.max_price_iota {
+            Some(max_price) => (max_price * WEI_PER_IOTA).into(),
+            None => DEFAULT_MAX_PRICE.into(),
+        };
+
         let app = AppData {
             password: self.password,
             contract_address: self.contract_address,
@@ -82,10 +95,11 @@ impl AppDataBuilder {
             database,
             database_path: PathBuf::from(self.database_path),
             chain_id: self.chain_id,
-            fee: self.fee,
+            fee: self.fee.into(),
             client,
             server_address: self.server_address,
             bind_address: self.bind_address,
+            max_price_wei,
         };
 
         Ok(Box::leak(Box::new(app)))

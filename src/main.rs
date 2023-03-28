@@ -3,6 +3,7 @@ use arguments::{
 };
 use clap::Parser;
 use config::ConfigFile;
+use ethers::types::U256;
 use library::{app::AppData, crypto, database::Database};
 use tokio::runtime::Runtime;
 #[macro_use]
@@ -81,7 +82,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
             SongsCommand::Remove { ids } => command::songs::remove(ids, app).await,
             SongsCommand::List => command::songs::run_list(app).await,
             SongsCommand::Download { song_id, to_file } => {
-                command::songs::download(app, song_id, to_file).await
+                command::songs::download(app, song_id, to_file, U256::MAX).await
             }
         },
         Command::Account(command) => match command {

@@ -1,5 +1,5 @@
 use crate::{library::app::AppData, library::util::SongId, BYTES_PER_CHUNK_USIZE};
-use ethers::types::{Address, H160};
+use ethers::types::{Address, H160, U256};
 use eyre::Context;
 use num_integer::div_ceil;
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
@@ -67,9 +67,30 @@ pub async fn download(
     app: &'static AppData,
     song_id: String,
     to_file: Option<String>,
+    max_price: U256,
 ) -> eyre::Result<()> {
     let song_id = song_id.parse()?;
     let song_info = app.client.call_get_song_info(song_id).await?;
+    let user_info = app
+        .client
+        .call_get_user_info(app.client.wallet_address())
+        .await?;
+
+    if song_info.price > max_price {
+        bail!(
+            "Selected song is too expensive. (price = {}, max_price = {})",
+            song_info.price,
+            max_price
+        )
+    }
+
+    if song_info.total_price() > user_info.balance {
+        bail!(
+            "Not enough funds! (song = {}, balance = {})",
+            song_info.total_price(),
+            user_info.balance
+        )
+    }
 
     let (distr_wallet_address, distr_socket_address) =
         app.client.call_get_rand_distributor(song_id).await?;

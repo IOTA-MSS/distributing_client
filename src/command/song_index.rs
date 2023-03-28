@@ -2,6 +2,7 @@ use crate::{
     command,
     library::{app::AppData, util::SongId},
 };
+use ethers::types::U256;
 use rand::{seq::IteratorRandom, thread_rng};
 
 pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>> {
@@ -66,7 +67,7 @@ pub async fn download(
     println!("Songs to be downloaded: {indexes:?}\n");
     for (index, id) in indexes {
         println!("\nDownloading song {index}: {id}:");
-        if let Err(e) = command::songs::download(app, id.to_string(), None).await {
+        if let Err(e) = command::songs::download(app, id.to_string(), None, U256::MAX).await {
             println!("Could not download song: {e}")
         }
     }

@@ -1,8 +1,8 @@
 mod calls;
 mod download;
 
-const GAS: usize = 1_000_000;
-const WEI_PER_IOTA: u128 = 1_000_000_000_000;
+pub const GAS: usize = 1_000_000;
+pub const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},

@@ -1,6 +1,6 @@
 use super::{TTCall, TTMiddleWare, TangleTunesClient, WEI_PER_IOTA};
 use crate::library::{
-    abi::SongInfo,
+    abi::{SongInfo, UserInfo},
     util::{SongId, TTCallExt},
 };
 use ethers::{
@@ -36,6 +36,10 @@ impl TangleTunesClient {
             .into())
     }
 
+    pub async fn call_get_user_info(&self, address: Address) -> Result<UserInfo, TTCallError> {
+        Ok(self.abi_client.users(address).set_defaults().await?.into())
+    }
+
     pub async fn call_song_list_length(&self) -> Result<U256, TTCallError> {
         self.abi_client.song_list_length().set_defaults().await
     }
@@ -60,9 +64,9 @@ impl TangleTunesClient {
     //  Non-pure
     //------------------------------------------------------------------------------------------------
 
-    pub fn distribute_call(&self, song_id: SongId, fee: u32) -> TTCall<()> {
+    pub fn distribute_call(&self, song_id: SongId, fee: U256) -> TTCall<()> {
         self.abi_client
-            .distribute(song_id.into(), fee.into())
+            .distribute(song_id.into(), fee)
             .set_defaults()
     }
 

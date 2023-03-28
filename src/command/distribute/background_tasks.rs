@@ -3,6 +3,7 @@ use crate::{
     library::{app::AppData, util::SongId},
 };
 use chrono::{DateTime, Utc};
+use ethers::types::U256;
 use std::{
     cmp::Reverse, collections::BinaryHeap, convert::Infallible, sync::Mutex, time::Duration,
 };
@@ -11,12 +12,13 @@ use tokio::{
     time::{Instant, MissedTickBehavior},
 };
 
-const POLL_INTERVAL: Duration = Duration::from_secs(10);
+const POLL_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Automatically downloads new songs from the smart-contract, and watches for new songs added
 /// to the database.
 pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infallible {
-    println!("Auto-distributor spawned");
+    println!("Auto-distributor spawned!");
+    println!("Automatically downloading new songs: {auto_download}");
 
     // Create the interval
     let mut interval =
@@ -25,8 +27,8 @@ pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infa
 
     // Create the song-queue
     let mut queue = {
+        let mut queue = NewSongQueue::new(Duration::from_secs(60));
         let downloaded_ids = app.database.get_all_downloaded_song_ids().await.unwrap();
-        let mut queue = NewSongQueue::new(Duration::from_secs(30));
         app.database
             .get_song_index()
             .await
@@ -74,7 +76,7 @@ async fn download_a_new_song(app: &'static AppData, queue: &mut NewSongQueue) ->
 
         // Finally download the song to the database
         let id = id.to_string();
-        return match command::songs::download(app, id.clone(), None).await {
+        return match command::songs::download(app, id.clone(), None, U256::MAX).await {
             Ok(()) => {
                 // If it was okay we can remove it from the queue
                 queue.update(true);

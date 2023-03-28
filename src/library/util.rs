@@ -2,7 +2,7 @@ use super::client::{TTCall, TangleTunesClient};
 use color_eyre::Report;
 use ethers::{
     abi::Detokenize,
-    types::TransactionReceipt,
+    types::{TransactionReceipt, U256},
     utils::hex::{FromHex, ToHex},
 };
 use ethers_providers::{Http, PendingTransaction};
@@ -94,6 +94,15 @@ where
     match hex.as_ref().strip_prefix("0x") {
         Some(hex) => Ok(FromHex::from_hex(hex)?),
         None => Ok(FromHex::from_hex(hex.as_ref())?),
+    }
+}
+
+pub fn div_ceil_u256(one: U256, other: U256) -> U256 {
+    let (q, r) = (one / other, one % other);
+    if r.is_zero() {
+        q
+    } else {
+        q + U256::from(1)
     }
 }
 
