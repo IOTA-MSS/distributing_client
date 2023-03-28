@@ -51,7 +51,7 @@ pub struct AppDataBuilder {
     pub password: Option<String>,
     pub server_address: SocketAddr,
     pub bind_address: SocketAddr,
-    pub max_price_iota: Option<u128>,
+    pub max_price_iota: Option<u64>,
 }
 
 impl AppDataBuilder {
@@ -84,7 +84,7 @@ impl AppDataBuilder {
             TangleTunesClient::initialize(wallet, &self.node_url, &self.contract_address).await?;
 
         let max_price_wei = match self.max_price_iota {
-            Some(max_price) => (max_price * WEI_PER_IOTA).into(),
+            Some(max_price) => ((max_price as u128) * WEI_PER_IOTA).into(),
             None => DEFAULT_MAX_PRICE.into(),
         };
 
