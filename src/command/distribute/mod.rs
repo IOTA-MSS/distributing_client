@@ -1,10 +1,10 @@
 mod background_tasks;
-mod song_registration;
+mod distribution;
 
 use crate::{
     command::distribute::{
         background_tasks::{auto_distribute, exit_listener},
-        song_registration::{deregister_for_songs_in_database, register_for_songs_in_database},
+        distribution::{distribute_songs_in_database, undistribute_songs_in_database},
     },
     library::{
         abi::GetChunksCall,
@@ -23,6 +23,8 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const DEBT_LIMIT: u32 = 10;
+const DISTR_SIZE: usize = 5;
+const DISTR_ATTEMPTS: usize = 3;
 
 pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre::Result<()> {
     let mut exit_listener = exit_listener()?;
@@ -44,8 +46,14 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
         .await?;
     println!("Registration of address succesful!\n");
 
-    // And register for the songs
-    register_for_songs_in_database(app).await?;
+    // And distribute the songs
+    if let Err(e) = distribute_songs_in_database(app, DISTR_ATTEMPTS, DISTR_SIZE).await {
+        return match undistribute_songs_in_database(app, DISTR_ATTEMPTS, DISTR_SIZE).await {
+            Ok(()) => Err(e),
+            Err(e2) => Err(e.wrap_err(e2)),
+        };
+    }
+
     let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, auto_download));
 
     let result = tokio::select! {
@@ -72,7 +80,7 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
         }
     };
 
-    match (deregister_for_songs_in_database(app).await, result) {
+    match (undistribute_songs_in_database(app, 3, 5).await, result) {
         (Ok(_), Ok(_)) => Ok(()),
         (Ok(_), Err(e)) => Err(e),
         (Err(e), Ok(_)) => Err(e),

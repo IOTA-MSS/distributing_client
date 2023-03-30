@@ -7,7 +7,7 @@ pub const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
     crypto::Wallet,
-    util::TTCallExt,
+    util::{TTCallExt, TransactionReceiptExt},
 };
 use crate::library::util::SongId;
 use ethers::{
@@ -19,6 +19,7 @@ use ethers::{
 };
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_providers::{Http, Middleware, Provider};
+use itertools::Itertools;
 use std::{ops::Deref, str::FromStr, sync::Arc};
 
 pub type TTMiddleWare = NonceManagerMiddleware<SignerMiddleware<Provider<Http>, LocalWallet>>;
@@ -150,6 +151,81 @@ impl TangleTunesClient {
 
     fn wallet(&self) -> &LocalWallet {
         self.abi_client.client_ref().inner().signer()
+    }
+
+    /// Attempts to distribute the given songs in a single transaction, while checking that we
+    /// are not actually distributing the songs already. It will only distribute those songs that
+    /// are not yet distributed.
+    pub async fn try_distribute(&'static self, songs: &[(SongId, U256)]) -> eyre::Result<()> {
+        // Check which songs we are already distributing
+        let distributions = self
+            .abi_client
+            .is_distributing(
+                songs
+                    .iter()
+                    .map(|(song, _fee)| (*song).into())
+                    .collect_vec(),
+                self.wallet_address(),
+            )
+            .await?;
+
+        // Only register for the songs where we are not yet distributing
+        let songs: Vec<(SongId, U256)> = songs
+            .iter()
+            .zip(distributions)
+            .filter_map(|(song, distributing)| (!distributing).then_some(*song))
+            .collect();
+
+        if songs.is_empty() {
+            return Ok(());
+        }
+
+        // And finally start distributing these songs
+        self.distribute_call(songs.clone())
+            .await?
+            .send()
+            .await?
+            .await?
+            .status_is_ok(&format!("Could not register song with ids {songs:?}"))?;
+
+        Ok(())
+    }
+
+    /// Attempts to undistribute the given songs in a single transaction, while checking that we
+    /// are actually distributing the songs. It will only undistribute those songs that
+    /// are distributed.
+    pub async fn try_undistribute(&'static self, songs: &Vec<SongId>) -> eyre::Result<()> {
+        println!("Deregistering songs {songs:?} on the smart-contract..");
+
+        // Check which songs we are actually distributing
+        let distributions = self
+            .abi_client
+            .is_distributing(
+                songs.iter().map(|song| (*song).into()).collect_vec(),
+                self.wallet_address(),
+            )
+            .await?;
+
+        // Only deregister for the songs where we are distributing
+        let songs: Vec<SongId> = songs
+            .iter()
+            .zip(distributions)
+            .filter_map(|(song, distribution)| distribution.then_some(*song))
+            .collect();
+
+        if songs.is_empty() {
+            return Ok(());
+        }
+
+        // And deregister for those filtered songs
+        self.undistribute_call(songs.clone())
+            .await?
+            .send()
+            .await?
+            .await?
+            .status_is_ok(&format!("Could not deregister song with ids {songs:?}"))?;
+
+        Ok(())
     }
 }
 
