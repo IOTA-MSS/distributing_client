@@ -2990,6 +2990,7 @@ dependencies = [
  "ethers-providers",
  "eyre",
  "futures",
+ "hyper",
  "itertools",
  "magic-crypt",
  "num-integer",

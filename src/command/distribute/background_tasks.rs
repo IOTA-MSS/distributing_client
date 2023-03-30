@@ -96,7 +96,13 @@ async fn download_a_new_song(app: &'static AppData, queue: &mut NewSongQueue) ->
 async fn distribute_added_songs(app: &'static AppData, from: &DateTime<Utc>) -> eyre::Result<()> {
     for song_id in app.database.get_new_songs(from).await? {
         println!("Registering for song {song_id}...");
-        if let Ok(pending_tx) = app.client.distribute_call(song_id, app.fee).send().await {
+        if let Ok(pending_tx) = app
+            .client
+            .distribute_call(vec![(song_id, app.fee)])
+            .await?
+            .send()
+            .await
+        {
             if (pending_tx.await).is_ok() {
                 println!("Succesfully registered for song {song_id}.");
             } else {

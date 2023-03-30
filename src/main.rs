@@ -57,6 +57,8 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 command::wallet::export_private_key(app).await
             }
             WalletCommand::Import { .. } | WalletCommand::Generate { .. } => unreachable!(),
+            WalletCommand::Balance => command::wallet::balance(app).await,
+            WalletCommand::RequestFunds => command::wallet::request_funds(app).await,
         },
         Command::Songs(command) => match command {
             SongsCommand::DownloadDirect {
@@ -92,6 +94,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
                 command::account::create(name, description, app).await
             }
             AccountCommand::Delete => command::account::delete(app).await,
+            AccountCommand::View => command::account::view(app).await,
         },
         Command::Distribute { auto_download } => {
             command::distribute::run_distribute(app, auto_download).await

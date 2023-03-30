@@ -13,7 +13,7 @@ pub struct ConfigFile {
     pub fee: u32,
     pub server_address: String,
     pub bind_address: String,
-    pub max_price: Option<u64>
+    pub max_price: Option<u64>,
 }
 
 impl ConfigFile {

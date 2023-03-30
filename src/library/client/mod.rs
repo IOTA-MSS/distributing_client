@@ -67,6 +67,14 @@ impl TangleTunesClient {
         Ok(contract)
     }
 
+    pub async fn l2_balance(&self) -> eyre::Result<U256> {
+        Ok(self
+            .abi_client
+            .client_ref()
+            .get_balance(self.wallet_address(), None)
+            .await?)
+    }
+
     /// Get the song metadata from the given index (inclusive)
     pub async fn get_song_ids_from_index(
         &self,

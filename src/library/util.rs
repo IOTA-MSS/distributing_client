@@ -2,7 +2,7 @@ use super::client::{TTCall, TangleTunesClient};
 use color_eyre::Report;
 use ethers::{
     abi::Detokenize,
-    types::{TransactionReceipt, U256},
+    types::TransactionReceipt,
     utils::hex::{FromHex, ToHex},
 };
 use ethers_providers::{Http, PendingTransaction};
@@ -97,14 +97,14 @@ where
     }
 }
 
-pub fn div_ceil_u256(one: U256, other: U256) -> U256 {
-    let (q, r) = (one / other, one % other);
-    if r.is_zero() {
-        q
-    } else {
-        q + U256::from(1)
-    }
-}
+// pub fn div_ceil_u256(one: U256, other: U256) -> U256 {
+//     let (q, r) = (one / other, one % other);
+//     if r.is_zero() {
+//         q
+//     } else {
+//         q + U256::from(1)
+//     }
+// }
 
 //------------------------------------------------------------------------------------------------
 //  TransactionReceipt

@@ -1,10 +1,10 @@
 mod background_tasks;
-mod register;
+mod song_registration;
 
 use crate::{
     command::distribute::{
         background_tasks::{auto_distribute, exit_listener},
-        register::{deregister_for_songs, register_for_songs},
+        song_registration::{deregister_for_songs_in_database, register_for_songs_in_database},
     },
     library::{
         abi::GetChunksCall,
@@ -19,10 +19,7 @@ use ethers_providers::StreamExt;
 use eyre::Context;
 use futures::SinkExt;
 use std::{collections::VecDeque, convert::Infallible, net::SocketAddr, time::Duration};
-use tokio::{
-    net::{TcpListener, TcpStream},
-    time::sleep,
-};
+use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 const DEBT_LIMIT: u32 = 10;
@@ -43,44 +40,39 @@ pub async fn run_distribute(app: &'static AppData, auto_download: bool) -> eyre:
     app.client
         .edit_server_info_call(app.server_address.to_string())
         .send()
+        .await?
         .await?;
-    sleep(Duration::from_secs(1)).await;
-    println!("Registration succesful!\n");
+    println!("Registration of address succesful!\n");
 
     // And register for the songs
-    println!("Registering for all songs in database..");
-    let result = match register_for_songs(app).await {
-        Ok(()) => {
-            let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, auto_download));
+    register_for_songs_in_database(app).await?;
+    let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, auto_download));
 
-            tokio::select! {
-                // The ctrl-c exit-handler
-                _ = &mut exit_listener => {
-                    auto_distributor.abort();
-                    let _ = auto_distributor.await;
-                    Ok(())
-                }
+    let result = tokio::select! {
+        // The ctrl-c exit-handler
+        _ = &mut exit_listener => {
+            auto_distributor.abort();
+            let _ = auto_distributor.await;
+            Ok(())
+        }
 
-                // The auto-distribute task
-                res = &mut auto_distributor => {
-                    Err(res.unwrap_err().into())
-                }
+        // The auto-distribute task
+        res = &mut auto_distributor => {
+            Err(res.unwrap_err().into())
+        }
 
-                // The main process that handles incoming connections
-                res = accept_tcp_connections(listener, app) => {
-                    auto_distributor.abort();
-                    let _ = auto_distributor.await;
-                    match res {
-                        Err(e) => Err(e),
-                        Ok(_) => unreachable!()
-                    }
-                }
+        // The main process that handles incoming connections
+        res = accept_tcp_connections(listener, app) => {
+            auto_distributor.abort();
+            let _ = auto_distributor.await;
+            match res {
+                Err(e) => Err(e),
+                Ok(_) => unreachable!()
             }
         }
-        Err(error) => Err(error),
     };
 
-    match (deregister_for_songs(app).await, result) {
+    match (deregister_for_songs_in_database(app).await, result) {
         (Ok(_), Ok(_)) => Ok(()),
         (Ok(_), Err(e)) => Err(e),
         (Err(e), Ok(_)) => Err(e),

@@ -34,7 +34,7 @@ pub enum Command {
     #[command(subcommand)]
     Songs(SongsCommand),
 
-    /// Manage the local song-index
+    /// Manage the local copy of the song-index
     #[command(subcommand)]
     SongIndex(SongIndexCommand),
 
@@ -85,6 +85,12 @@ pub enum WalletCommand {
         #[arg(long, required = true)]
         plaintext: bool,
     },
+
+    /// Display the balance of your wallet (L2)
+    Balance,
+
+    /// Request funds from the test-network
+    RequestFunds,
 }
 
 #[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +120,9 @@ pub enum AccountCommand {
 
     /// Delete the account coupled to your wallet
     Delete,
+
+    /// View your account details
+    View,
 }
 
 #[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]

@@ -1,4 +1,6 @@
-use crate::library::{app::AppData, util::TransactionReceiptExt};
+use crate::library::{
+    abi::UserInfo, app::AppData, client::WEI_PER_IOTA, util::TransactionReceiptExt,
+};
 
 pub async fn create(
     name: String,
@@ -53,5 +55,28 @@ pub async fn withdraw(iota: u64, app: &'static AppData) -> eyre::Result<()> {
         .unwrap()
         .status_is_ok("")?;
     println!("Succesfully withdrew from the smart contract!");
+    Ok(())
+}
+
+pub(crate) async fn view(app: &AppData) -> eyre::Result<()> {
+    let UserInfo {
+        exists: _,
+        username,
+        description,
+        server,
+        balance,
+        is_validator,
+    } = app
+        .client
+        .get_user_info(app.client.wallet_address())
+        .await?;
+
+    println!("-- Your TangleTunes account --");
+    println!("| username: {username}");
+    println!("| description: {description}");
+    println!("| server: {server}");
+    println!("| balance: {} IOTA", balance / WEI_PER_IOTA);
+    println!("| validator: {is_validator}");
+
     Ok(())
 }

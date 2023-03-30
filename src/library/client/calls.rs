@@ -1,12 +1,15 @@
+use std::future::IntoFuture;
+
 use super::{TTCall, TTMiddleWare, TangleTunesClient, WEI_PER_IOTA};
 use crate::library::{
-    abi::{SongInfo, UserInfo},
+    abi::{DistributionListing, SongInfo, UserInfo},
     util::{SongId, TTCallExt},
 };
 use ethers::{
     prelude::ContractError,
     types::{Address, U256},
 };
+use futures::future::join;
 use itertools::Itertools;
 
 pub type TTCallError = ContractError<TTMiddleWare>;
@@ -17,17 +20,17 @@ impl TangleTunesClient {
     //------------------------------------------------------------------------------------------------
 
     /// Get a random distributor from the smart contract
-    pub async fn call_get_rand_distributor(
+    pub async fn get_rand_distributor(
         &self,
         song: SongId,
-    ) -> Result<(Address, String), TTCallError> {
+    ) -> Result<DistributionListing, TTCallError> {
         self.abi_client
-            .get_rand_distributor(song.into())
+            .get_rand_distributor(song.into(), rand::random::<u128>().into())
             .set_defaults()
             .await
     }
 
-    pub async fn call_get_song_info(&self, song_id: SongId) -> Result<SongInfo, TTCallError> {
+    pub async fn get_song_info(&self, song_id: SongId) -> Result<SongInfo, TTCallError> {
         Ok(self
             .abi_client
             .songs(song_id.into())
@@ -36,7 +39,7 @@ impl TangleTunesClient {
             .into())
     }
 
-    pub async fn call_get_user_info(&self, address: Address) -> Result<UserInfo, TTCallError> {
+    pub async fn get_user_info(&self, address: Address) -> Result<UserInfo, TTCallError> {
         Ok(self.abi_client.users(address).set_defaults().await?.into())
     }
 
@@ -64,18 +67,47 @@ impl TangleTunesClient {
     //  Non-pure
     //------------------------------------------------------------------------------------------------
 
-    pub fn distribute_call(&self, song_id: SongId, fee: U256) -> TTCall<()> {
-        self.abi_client
-            .distribute(song_id.into(), fee)
-            .set_defaults()
+    pub async fn distribute_call(&self, songs: Vec<(SongId, U256)>) -> eyre::Result<TTCall<()>> {
+        let mut song_ids = Vec::with_capacity(songs.len());
+        let mut fees = Vec::with_capacity(songs.len());
+        for (song_id, fee) in songs {
+            song_ids.push(song_id.into());
+            fees.push(fee);
+        }
+
+        let indexes = join(
+            self.abi_client
+                .find_dist_indexes(song_ids.clone(), self.wallet_address())
+                .into_future(),
+            self.abi_client
+                .find_insert_indexes(song_ids.clone(), fees.clone())
+                .into_future(),
+        )
+        .await;
+        let (dist_indexes, insert_indexes) = (indexes.0?, indexes.1?);
+
+        Ok(self
+            .abi_client
+            .distribute(song_ids, fees, dist_indexes, insert_indexes)
+            .set_defaults())
+    }
+
+    pub async fn undistribute_call(&self, song_id: Vec<SongId>) -> eyre::Result<TTCall<()>> {
+        let song_ids: Vec<[u8; 32]> = song_id.into_iter().map(Into::into).collect();
+
+        let indexes = self
+            .abi_client
+            .find_dist_indexes(song_ids.clone(), self.wallet_address())
+            .await?;
+
+        Ok(self
+            .abi_client
+            .undistribute(song_ids, indexes)
+            .set_defaults())
     }
 
     pub fn edit_server_info_call(&self, address: String) -> TTCall<()> {
         self.abi_client.edit_server_info(address).set_defaults()
-    }
-
-    pub fn undistribute_call(&self, song_id: SongId) -> TTCall<()> {
-        self.abi_client.undistribute(song_id.into()).set_defaults()
     }
 
     pub fn deposit_call(&self, iota: u128) -> TTCall<()> {
@@ -87,7 +119,7 @@ impl TangleTunesClient {
 
     pub fn withdraw_call(&self, iota: u128) -> TTCall<()> {
         self.abi_client
-            .withdraw((iota * WEI_PER_IOTA).into())
+            .withdraw_to_chain((iota * WEI_PER_IOTA).into())
             .set_defaults()
     }
 

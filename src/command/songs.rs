@@ -70,10 +70,10 @@ pub async fn download(
     max_price: U256,
 ) -> eyre::Result<()> {
     let song_id = song_id.parse()?;
-    let song_info = app.client.call_get_song_info(song_id).await?;
+    let song_info = app.client.get_song_info(song_id).await?;
     let user_info = app
         .client
-        .call_get_user_info(app.client.wallet_address())
+        .get_user_info(app.client.wallet_address())
         .await?;
 
     if song_info.price > max_price {
@@ -92,21 +92,20 @@ pub async fn download(
         )
     }
 
-    let (distr_wallet_address, distr_socket_address) =
-        app.client.call_get_rand_distributor(song_id).await?;
+    let distribution = app.client.get_rand_distributor(song_id).await?;
 
-    if distr_wallet_address == ZERO_ADDRESS {
+    if distribution.distributor == ZERO_ADDRESS {
         bail!("No distributor found for song {song_id}");
     }
 
     let song = app
         .client
         .download_from_distributor(
-            distr_socket_address.parse()?,
+            distribution.server.parse()?,
             song_id,
             0,
             div_ceil(song_info.len.as_usize(), BYTES_PER_CHUNK_USIZE),
-            distr_wallet_address,
+            distribution.distributor,
         )
         .await?;
 

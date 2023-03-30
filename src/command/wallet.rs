@@ -1,4 +1,6 @@
-use crate::library::{app::AppData, crypto::Wallet, database::Database, util::to_hex_prefix};
+use crate::library::{
+    app::AppData, client::WEI_PER_IOTA, crypto::Wallet, database::Database, util::to_hex_prefix,
+};
 use std::io::stdin;
 
 pub async fn generate(password: Option<String>, database: Database) -> eyre::Result<()> {
@@ -66,4 +68,28 @@ fn ask_confirmation(msg: &str) -> eyre::Result<bool> {
         println!("Canceling...");
         Ok(false)
     }
+}
+
+pub(crate) async fn balance(app: &AppData) -> eyre::Result<()> {
+    let balance = app.client.l2_balance().await?;
+    println!("Your layer-2 balance is {} IOTA", balance / WEI_PER_IOTA);
+    Ok(())
+}
+
+pub(crate) async fn request_funds(app: &AppData) -> eyre::Result<()> {
+    let uri = format!(
+        "http://tangletunes.com/debug/faucet/{}",
+        to_hex_prefix(app.client.wallet_address())
+    )
+    .parse()?;
+
+    let response = hyper::client::Client::new().get(uri).await?;
+
+    if response.status().is_success() {
+        println!("100 MIOTA requested!");
+    } else {
+        println!("Request failed: {:#?}", response);
+    }
+
+    Ok(())
 }
