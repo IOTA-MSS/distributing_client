@@ -1,5 +1,5 @@
 use crate::library::{
-    app::AppData, client::WEI_PER_IOTA, crypto::Wallet, database::Database, util::to_hex_prefix,
+    app::App, client::WEI_PER_IOTA, crypto::Wallet, database::Database, util::to_hex_prefix,
 };
 use std::io::stdin;
 
@@ -14,7 +14,7 @@ pub async fn import(password: Option<String>, key: String, database: Database) -
     Ok(())
 }
 
-pub async fn remove(app: &'static AppData) -> eyre::Result<()> {
+pub async fn remove(app: &'static App) -> eyre::Result<()> {
     if ask_confirmation(
         "Are you sure? This will delete the private key. Make sure it is backed up!",
     )? {
@@ -23,12 +23,12 @@ pub async fn remove(app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn export_address(app: &'static AppData) -> eyre::Result<()> {
+pub async fn export_address(app: &'static App) -> eyre::Result<()> {
     println!("Your address: {:?}", app.client.wallet_address());
     Ok(())
 }
 
-pub async fn export_private_key(app: &'static AppData) -> eyre::Result<()> {
+pub async fn export_private_key(app: &'static App) -> eyre::Result<()> {
     println!(
         "Your private key: {:?}",
         to_hex_prefix(app.client.wallet_private_key().to_bytes())
@@ -70,13 +70,13 @@ fn ask_confirmation(msg: &str) -> eyre::Result<bool> {
     }
 }
 
-pub(crate) async fn balance(app: &AppData) -> eyre::Result<()> {
+pub(crate) async fn balance(app: &App) -> eyre::Result<()> {
     let balance = app.client.l2_balance().await?;
     println!("Your layer-2 balance is {} IOTA", balance / WEI_PER_IOTA);
     Ok(())
 }
 
-pub(crate) async fn request_funds(app: &AppData) -> eyre::Result<()> {
+pub(crate) async fn request_funds(app: &App) -> eyre::Result<()> {
     let uri = format!(
         "http://tangletunes.com/debug/faucet/{}",
         to_hex_prefix(app.client.wallet_address())

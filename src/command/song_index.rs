@@ -1,11 +1,11 @@
 use crate::{
     command,
-    library::{app::AppData, util::SongId},
+    library::{app::App, util::SongId},
 };
 use ethers::types::U256;
 use rand::{seq::IteratorRandom, thread_rng};
 
-pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>> {
+pub async fn update(app: &'static App) -> eyre::Result<Vec<(usize, SongId)>> {
     let index = app.database.get_next_song_index().await?;
     let new_ids = app.client.get_song_ids_from_index(index).await?;
     println!("New songs:");
@@ -16,7 +16,7 @@ pub async fn update(app: &'static AppData) -> eyre::Result<Vec<(usize, SongId)>>
     Ok(new_ids)
 }
 
-pub async fn reset(app: &'static AppData, to_update: bool) -> eyre::Result<()> {
+pub async fn reset(app: &'static App, to_update: bool) -> eyre::Result<()> {
     app.database.clear_song_index().await?;
     println!("Song index cleared.\n");
     if to_update {
@@ -25,7 +25,7 @@ pub async fn reset(app: &'static AppData, to_update: bool) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn list(app: &'static AppData) -> eyre::Result<()> {
+pub async fn list(app: &'static App) -> eyre::Result<()> {
     println!("Song index:");
     for (i, id) in app.database.get_song_index().await? {
         println!("{i}: {id}");
@@ -34,7 +34,7 @@ pub async fn list(app: &'static AppData) -> eyre::Result<()> {
 }
 
 pub async fn download(
-    app: &'static AppData,
+    app: &'static App,
     amount: Option<usize>,
     indexes: Option<Vec<usize>>,
 ) -> eyre::Result<()> {

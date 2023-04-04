@@ -177,7 +177,7 @@ impl RequestQueue {
 mod test {
     use crate::{
         library::{
-            app::AppData,
+            app::App,
             client::download::{RequestQueue, CHUNKS_PER_REQUEST},
         },
         test::VALIDATED_SONG_HEX_ID,
@@ -189,7 +189,7 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test() -> eyre::Result<()> {
-        let app = AppData::init_for_test(None, false).await?;
+        let app = App::init_for_test(None, false).await?;
         let song_id = VALIDATED_SONG_HEX_ID.parse()?;
         let chunks = app.database.get_chunks(&song_id, 0, 20).await?;
         assert!(app
@@ -216,13 +216,10 @@ mod test {
         let song = vec![0; BYTES_PER_CHUNK_USIZE * requests];
         let mut queue = RequestQueue::new(0, requests);
 
+        assert_eq!(queue.request_now(&song), Some((0, CHUNKS_PER_REQUEST)));
         assert_eq!(
             queue.request_now(&song),
-            Some((0 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
-        );
-        assert_eq!(
-            queue.request_now(&song),
-            Some((1 * CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
+            Some((CHUNKS_PER_REQUEST, CHUNKS_PER_REQUEST))
         );
         assert_eq!(
             queue.request_now(&song),

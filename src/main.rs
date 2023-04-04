@@ -4,7 +4,7 @@ use arguments::{
 use clap::Parser;
 use config::ConfigFile;
 use ethers::types::U256;
-use library::{app::AppData, crypto, database::Database};
+use library::{app::App, crypto, database::Database};
 use tokio::runtime::Runtime;
 #[macro_use]
 extern crate eyre;
@@ -48,7 +48,7 @@ fn main() -> eyre::Result<()> {
     })
 }
 
-async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()> {
+async fn run_command(app: &'static App, command: Command) -> eyre::Result<()> {
     match command {
         Command::Wallet(command) => match command {
             WalletCommand::Remove => command::wallet::remove(app).await,
@@ -97,7 +97,7 @@ async fn run_command(app: &'static AppData, command: Command) -> eyre::Result<()
             AccountCommand::View => command::account::view(app).await,
         },
         Command::Distribute { auto_download } => {
-            command::distribute::run_distribute(app, auto_download).await
+            command::distribute::distribute(app, auto_download).await
         }
         Command::SongIndex(command) => match command {
             SongIndexCommand::Update => {
@@ -129,9 +129,9 @@ pub mod test {
         8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34,
         4, 5, 6,
     ];
-    pub const NODE_URL: &'static str = "http://localhost:9090/chains/tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s/evm";
-    pub const CONTRACT_ADDRESS: &'static str = "0xAD3781Bd2FEC290b01c8C410eF6a7e8Baae632Db";
-    pub const IOTA_CHAIN_ID: &'static str =
+    pub const NODE_URL: &str = "http://localhost:9090/chains/tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s/evm";
+    pub const CONTRACT_ADDRESS: &str = "0xAD3781Bd2FEC290b01c8C410eF6a7e8Baae632Db";
+    pub const IOTA_CHAIN_ID: &str =
         "tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s";
     pub const CHAIN_ID: u16 = 1074;
 }

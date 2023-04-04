@@ -343,7 +343,7 @@ mod test {
         let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert_eq!(db.remove_song(&unvalidated_song_id).await?, false);
+        assert!(db.remove_song(&unvalidated_song_id).await?);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",
@@ -352,7 +352,7 @@ mod test {
         let db_data = db.get_chunks(&unvalidated_song_id, 0, 100).await?;
         assert_eq!(song_data, db_data);
 
-        assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
+        assert!(db.remove_song(&unvalidated_song_id).await?);
         assert!(db.get_chunks(&unvalidated_song_id, 0, 100).await.is_err());
 
         Ok(())
@@ -395,7 +395,7 @@ mod test {
 
         assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 2);
 
-        assert_eq!(db.remove_song(&unvalidated_song_id).await?, true);
+        assert!(db.remove_song(&unvalidated_song_id).await?);
 
         assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 1);
 

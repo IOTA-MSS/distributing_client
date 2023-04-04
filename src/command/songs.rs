@@ -1,4 +1,4 @@
-use crate::{library::app::AppData, library::util::SongId, BYTES_PER_CHUNK_USIZE};
+use crate::{library::app::App, library::util::SongId, BYTES_PER_CHUNK_USIZE};
 use ethers::types::{Address, H160, U256};
 use eyre::Context;
 use num_integer::div_ceil;
@@ -6,7 +6,7 @@ use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 const ZERO_ADDRESS: Address = H160([0; 20]);
 
-pub async fn remove(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
+pub async fn remove(ids: Vec<String>, cfg: &'static App) -> eyre::Result<()> {
     println!("Removing songs: {ids:?}\n");
     for id in &ids {
         let song_id = match SongId::try_from_hex(id) {
@@ -30,7 +30,7 @@ pub async fn remove(ids: Vec<String>, cfg: &'static AppData) -> eyre::Result<()>
     Ok(())
 }
 
-pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> {
+pub async fn add(paths: Vec<String>, cfg: &'static App) -> eyre::Result<()> {
     println!("Adding songs: {paths:?}");
 
     for path in paths {
@@ -51,7 +51,7 @@ pub async fn add(paths: Vec<String>, cfg: &'static AppData) -> eyre::Result<()> 
     Ok(())
 }
 
-pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
+pub(crate) async fn run_list(app: &'static App) -> eyre::Result<()> {
     println!("Songs stored locally:");
     for song_id in app.database.get_all_downloaded_song_ids().await? {
         let index = match app.database.get_index_by_song_id(&song_id).await? {
@@ -64,7 +64,7 @@ pub(crate) async fn run_list(app: &'static AppData) -> eyre::Result<()> {
 }
 
 pub async fn download(
-    app: &'static AppData,
+    app: &'static App,
     song_id: String,
     to_file: Option<String>,
     max_price: U256,
@@ -126,7 +126,7 @@ pub async fn download(
 }
 
 pub async fn download_direct(
-    app: &'static AppData,
+    app: &'static App,
     socket_address: String,
     song_id: String,
     file: String,

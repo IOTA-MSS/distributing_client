@@ -235,14 +235,14 @@ mod test {
     use futures::stream::FuturesUnordered;
 
     use crate::library::{
-        app::AppData,
+        app::App,
         util::{to_hex_prefix, PendingTransactionExt},
     };
 
     #[ignore]
     #[tokio::test]
     async fn get_songs_test() -> eyre::Result<()> {
-        let app: &'static AppData = AppData::init_for_test(None, false).await?;
+        let app: &'static App = App::init_for_test(None, false).await?;
         dbg!(app.client.get_song_ids_from_index(0).await?);
         Ok(())
     }
@@ -250,7 +250,7 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn send_many_transactions() -> eyre::Result<()> {
-        let app: &'static AppData = AppData::init_for_test(None, false).await?;
+        let app: &'static App = App::init_for_test(None, false).await?;
 
         let results = FuturesUnordered::new();
         for _i in 0..100 {

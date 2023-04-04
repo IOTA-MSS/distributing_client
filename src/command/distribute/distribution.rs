@@ -1,4 +1,4 @@
-use crate::library::{app::AppData, util::SongId};
+use crate::library::{app::App, util::SongId};
 use itertools::Itertools;
 
 /// Distributes all songs in the database, only if we are not yet distributing them.
@@ -6,7 +6,7 @@ use itertools::Itertools;
 ///
 /// If an error occurs, make sure to call [`undistribute_songs_in_database`] after!
 pub async fn distribute_songs_in_database(
-    app: &'static AppData,
+    app: &'static App,
     attempts: usize,
     size: usize,
 ) -> eyre::Result<()> {
@@ -24,12 +24,13 @@ pub async fn distribute_songs_in_database(
         // We try REGISTER_ATTEMPTS amount of times to distribute the song.
         // It might happen that someone else attempts to distribute the song while we are,
         // and that can mess up the transaction.
-        let mut i = 0;
+        let mut i = 1;
         loop {
             match app.client.try_distribute(&songs).await {
                 Ok(()) => break Ok(()),
                 Err(e) => {
-                    if i == attempts {
+                    println!("Could not register for songs. Retrying...");
+                    if i <= attempts {
                         break Err(e);
                     }
                 }
@@ -47,7 +48,7 @@ pub async fn distribute_songs_in_database(
 ///
 /// If an error occurs it may be true that there are songs which are not undistributed!.
 pub async fn undistribute_songs_in_database(
-    app: &'static AppData,
+    app: &'static App,
     attempts: usize,
     size: usize,
 ) -> eyre::Result<()> {

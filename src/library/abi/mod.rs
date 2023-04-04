@@ -24,8 +24,8 @@ pub struct SongInfo {
 
 impl SongInfo {
     pub fn total_price(&self) -> U256 {
-        todo!()
-        // self.price * div_ceil_u256(self.len, BYTES_PER_CHUNK_USIZE.into())
+        0.into() // FIXME
+                 // self.price * div_ceil_u256(self.len, BYTES_PER_CHUNK_USIZE.into())
     }
 }
 

@@ -12,7 +12,7 @@ use super::client::WEI_PER_IOTA;
 const DEFAULT_MAX_PRICE: u128 = WEI_PER_IOTA * 1_000_000; // 1 million iota
 
 #[derive(Debug)]
-pub struct AppData {
+pub struct App {
     pub password: Option<String>,
     pub contract_address: String,
     pub node_url: String,
@@ -26,7 +26,7 @@ pub struct AppData {
     pub max_price_wei: U256,
 }
 
-impl AppData {
+impl App {
     /// Updates the internal song-list with data from the smart contract.
     pub async fn update_song_list(&self) -> eyre::Result<()> {
         let index = self.database.get_next_song_index().await?;
@@ -55,11 +55,11 @@ pub struct AppDataBuilder {
 }
 
 impl AppDataBuilder {
-    pub async fn build(self) -> eyre::Result<&'static AppData> {
+    pub async fn build(self) -> eyre::Result<&'static App> {
         Self::_build(self, false).await
     }
 
-    async fn _build(self, in_memory: bool) -> eyre::Result<&'static AppData> {
+    async fn _build(self, in_memory: bool) -> eyre::Result<&'static App> {
         let database = if in_memory {
             Database::initialize_in_memory().await?
         } else {
@@ -88,7 +88,7 @@ impl AppDataBuilder {
             None => DEFAULT_MAX_PRICE.into(),
         };
 
-        let app = AppData {
+        let app = App {
             password: self.password,
             contract_address: self.contract_address,
             node_url: self.node_url,
@@ -108,18 +108,18 @@ impl AppDataBuilder {
 
 #[cfg(test)]
 pub mod test {
-    use super::{AppData, AppDataBuilder};
+    use super::{App, AppDataBuilder};
     use crate::config::ConfigFile;
     use eyre::Context;
 
-    impl AppData {
+    impl App {
         /// Overrides:
         /// - database_path to ":memory:" (in memory database)
         /// - ip_address to "127.0.0.1"
         pub async fn init_for_test(
             port: Option<u16>,
             in_memory: bool,
-        ) -> eyre::Result<&'static AppData> {
+        ) -> eyre::Result<&'static App> {
             let mut builder = ConfigFile::from_path("TangleTunes.toml")
                 .wrap_err("Cannot run tests without config file at ./TangleTunes.toml")?
                 .parse_to_app_builder(None, "TangleTunes.toml")?;

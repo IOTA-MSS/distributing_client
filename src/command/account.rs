@@ -1,11 +1,9 @@
-use crate::library::{
-    abi::UserInfo, app::AppData, client::WEI_PER_IOTA, util::TransactionReceiptExt,
-};
+use crate::library::{abi::UserInfo, app::App, client::WEI_PER_IOTA, util::TransactionReceiptExt};
 
 pub async fn create(
     name: String,
     description: Option<String>,
-    app: &'static AppData,
+    app: &'static App,
 ) -> eyre::Result<()> {
     println!("Creating user...");
     app.client
@@ -19,7 +17,7 @@ pub async fn create(
     Ok(())
 }
 
-pub async fn delete(app: &'static AppData) -> eyre::Result<()> {
+pub async fn delete(app: &'static App) -> eyre::Result<()> {
     println!("Deleting user...");
     app.client
         .delete_user_call()
@@ -32,7 +30,7 @@ pub async fn delete(app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn deposit(iota: u64, app: &'static AppData) -> eyre::Result<()> {
+pub async fn deposit(iota: u64, app: &'static App) -> eyre::Result<()> {
     println!("Depositing to account...");
     app.client
         .deposit_call(iota as u128)
@@ -45,7 +43,7 @@ pub async fn deposit(iota: u64, app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub async fn withdraw(iota: u64, app: &'static AppData) -> eyre::Result<()> {
+pub async fn withdraw(iota: u64, app: &'static App) -> eyre::Result<()> {
     println!("Withdrawing from account...");
     app.client
         .withdraw_call(iota as u128)
@@ -58,7 +56,7 @@ pub async fn withdraw(iota: u64, app: &'static AppData) -> eyre::Result<()> {
     Ok(())
 }
 
-pub(crate) async fn view(app: &AppData) -> eyre::Result<()> {
+pub(crate) async fn view(app: &App) -> eyre::Result<()> {
     let UserInfo {
         exists: _,
         username,

@@ -1,6 +1,6 @@
 use crate::{
     command,
-    library::{app::AppData, util::SongId},
+    library::{app::App, util::SongId},
 };
 use chrono::{DateTime, Utc};
 use ethers::types::U256;
@@ -14,9 +14,22 @@ use tokio::{
 
 const POLL_INTERVAL: Duration = Duration::from_secs(15);
 
+/// A future that returns when ctrl-c is pressed in the terminal.
+/// This can be used to gracefully exit by undistributing songs.
+pub fn exit_listener() -> eyre::Result<oneshot::Receiver<()>> {
+    static EXIT_SIGNAL: Mutex<Option<oneshot::Sender<()>>> = Mutex::new(None);
+
+    let (tx, rx) = oneshot::channel();
+    *EXIT_SIGNAL.lock().unwrap() = Some(tx);
+    ctrlc::set_handler(|| {
+        let _ = EXIT_SIGNAL.lock().unwrap().take().unwrap().send(());
+    })?;
+    Ok(rx)
+}
+
 /// Automatically downloads new songs from the smart-contract, and watches for new songs added
 /// to the database.
-pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infallible {
+pub async fn auto_distribute(app: &'static App, auto_download: bool) -> Infallible {
     println!("Auto-distributor spawned!");
     println!("Automatically downloading new songs: {auto_download}");
 
@@ -56,7 +69,7 @@ pub async fn auto_distribute(app: &'static AppData, auto_download: bool) -> Infa
 }
 
 /// Downloads a new song newly published on the smart-contract
-async fn download_a_new_song(app: &'static AppData, queue: &mut NewSongQueue) -> eyre::Result<()> {
+async fn download_a_new_song(app: &'static App, queue: &mut NewSongQueue) -> eyre::Result<()> {
     loop {
         // update the queue with new songs
         for (index, id) in command::song_index::update(app).await? {
@@ -93,7 +106,7 @@ async fn download_a_new_song(app: &'static AppData, queue: &mut NewSongQueue) ->
 }
 
 /// Distributes any songs added from a certain time.
-async fn distribute_added_songs(app: &'static AppData, from: &DateTime<Utc>) -> eyre::Result<()> {
+async fn distribute_added_songs(app: &'static App, from: &DateTime<Utc>) -> eyre::Result<()> {
     for song_id in app.database.get_new_songs(from).await? {
         println!("Registering for song {song_id}...");
         if let Ok(pending_tx) = app
@@ -113,17 +126,6 @@ async fn distribute_added_songs(app: &'static AppData, from: &DateTime<Utc>) -> 
         }
     }
     Ok(())
-}
-
-pub fn exit_listener() -> eyre::Result<oneshot::Receiver<()>> {
-    static EXIT_SIGNAL: Mutex<Option<oneshot::Sender<()>>> = Mutex::new(None);
-
-    let (tx, rx) = oneshot::channel();
-    *EXIT_SIGNAL.lock().unwrap() = Some(tx);
-    ctrlc::set_handler(|| {
-        let _ = EXIT_SIGNAL.lock().unwrap().take().unwrap().send(());
-    })?;
-    Ok(rx)
 }
 
 //------------------------------------------------------------------------------------------------
