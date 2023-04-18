@@ -176,29 +176,11 @@ impl RequestQueue {
 #[cfg(test)]
 mod test {
     use crate::{
-        library::{
-            app::App,
-            client::download::{RequestQueue, CHUNKS_PER_REQUEST},
-        },
-        test::VALIDATED_SONG_HEX_ID,
+        library::client::download::{RequestQueue, CHUNKS_PER_REQUEST},
         BYTES_PER_CHUNK_USIZE,
     };
 
     use super::song_is_complete;
-
-    #[ignore]
-    #[tokio::test]
-    async fn test() -> eyre::Result<()> {
-        let app = App::init_for_test(None, false).await?;
-        let song_id = VALIDATED_SONG_HEX_ID.parse()?;
-        let chunks = app.database.get_chunks(&song_id, 0, 20).await?;
-        assert!(app
-            .client
-            .verify_chunks_against_smart_contract(song_id, &chunks, 0)
-            .await
-            .is_ok());
-        Ok(())
-    }
 
     #[test]
     fn song_is_complete_test() {

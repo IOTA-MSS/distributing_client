@@ -119,17 +119,7 @@ const BYTES_PER_CHUNK_USIZE: usize = BYTES_PER_CHUNK as usize;
 
 #[cfg(test)]
 pub mod test {
-    pub const UNVALIDATED_SONG_HEX_ID: &str =
-        "0x0800000722040506080000072204050608000007220405060800000722040506";
-    pub const VALIDATED_SONG_HEX_ID: &str =
-        "0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf";
-    pub const SONG_ID: [u8; 32] = [
-        8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34, 4, 5, 6, 8, 0, 0, 7, 34,
-        4, 5, 6,
-    ];
-    pub const NODE_URL: &str = "http://localhost:9090/chains/tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s/evm";
-    pub const CONTRACT_ADDRESS: &str = "0xAD3781Bd2FEC290b01c8C410eF6a7e8Baae632Db";
-    pub const IOTA_CHAIN_ID: &str =
-        "tst1pzt0gue3mhz3pftwkqmxmyk8kv3mfzsn57erv20jemcrkjftktvuj5e0k6s";
+    pub const HEX_ID_1: &str = "0x0800000722040506080000072204050608000007220405060800000722040506";
+    pub const HEX_ID_2: &str = "0x486df48c7468457fc8fbbdc0cd1ce036b2b21e2f093559be3c37fcb024c1facf";
     pub const CHAIN_ID: u16 = 1074;
 }

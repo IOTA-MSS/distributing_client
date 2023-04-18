@@ -211,7 +211,7 @@ mod test {
     use std::time::Duration;
 
     #[test]
-    fn test_new_song_queue() {
+    fn song_queue() {
         let mut queue = NewSongQueue::new(Duration::from_millis(10));
         queue.push(0, SongId::from([0; 32]));
         std::thread::sleep(Duration::from_millis(10));

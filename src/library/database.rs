@@ -308,7 +308,7 @@ mod test {
 
     #[tokio::test]
     async fn chunking_is_correct() -> eyre::Result<()> {
-        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+        let unvalidated_song_id = SongId::try_from_hex(test::HEX_ID_1).unwrap();
 
         let db = Database::initialize_in_memory().await?;
         let song_data = std::fs::read(
@@ -340,7 +340,7 @@ mod test {
 
     #[tokio::test]
     async fn add_remove_song() -> eyre::Result<()> {
-        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
+        let unvalidated_song_id = SongId::try_from_hex(test::HEX_ID_1).unwrap();
         let db = Database::initialize_in_memory().await?;
 
         assert!(!db.remove_song(&unvalidated_song_id).await?);
@@ -360,8 +360,8 @@ mod test {
 
     #[tokio::test]
     async fn song_index() -> eyre::Result<()> {
-        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
-        let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
+        let unvalidated_song_id = SongId::try_from_hex(test::HEX_ID_1).unwrap();
+        let validated_song_id = SongId::try_from_hex(test::HEX_ID_2).unwrap();
         let db = Database::initialize_in_memory().await?;
 
         assert_eq!(db.get_next_song_index().await?, 0);
@@ -375,8 +375,8 @@ mod test {
 
     #[tokio::test]
     async fn song_metadata() -> eyre::Result<()> {
-        let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
-        let validated_song_id = SongId::try_from_hex(test::VALIDATED_SONG_HEX_ID).unwrap();
+        let unvalidated_song_id = SongId::try_from_hex(test::HEX_ID_1).unwrap();
+        let validated_song_id = SongId::try_from_hex(test::HEX_ID_2).unwrap();
         let db = Database::initialize_in_memory().await?;
 
         assert_eq!(db.get_all_downloaded_song_ids().await?.len(), 0);

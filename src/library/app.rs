@@ -40,6 +40,25 @@ impl App {
         self.update_song_list().await?;
         Ok(())
     }
+
+    /// Overrides:
+    /// - database_path to ":memory:" (in memory database)
+    /// - ip_address to "127.0.0.1"
+    #[cfg(test)]
+    pub async fn init_for_test(port: Option<u16>, in_memory: bool) -> eyre::Result<&'static App> {
+        use crate::config::ConfigFile;
+        use eyre::Context;
+
+        let mut builder = ConfigFile::from_path("TangleTunes.toml")
+            .wrap_err("Cannot run tests without config file at ./TangleTunes.toml")?
+            .parse_to_app_builder(None, "TangleTunes.toml")?;
+
+        if let Some(port) = port {
+            builder.bind_address = format!("127.0.0.1:{port}").parse()?;
+        }
+
+        AppDataBuilder::_build(builder, in_memory).await
+    }
 }
 
 pub struct AppDataBuilder {
@@ -103,32 +122,5 @@ impl AppDataBuilder {
         };
 
         Ok(Box::leak(Box::new(app)))
-    }
-}
-
-#[cfg(test)]
-pub mod test {
-    use super::{App, AppDataBuilder};
-    use crate::config::ConfigFile;
-    use eyre::Context;
-
-    impl App {
-        /// Overrides:
-        /// - database_path to ":memory:" (in memory database)
-        /// - ip_address to "127.0.0.1"
-        pub async fn init_for_test(
-            port: Option<u16>,
-            in_memory: bool,
-        ) -> eyre::Result<&'static App> {
-            let mut builder = ConfigFile::from_path("TangleTunes.toml")
-                .wrap_err("Cannot run tests without config file at ./TangleTunes.toml")?
-                .parse_to_app_builder(None, "TangleTunes.toml")?;
-
-            if let Some(port) = port {
-                builder.bind_address = format!("127.0.0.1:{port}").parse()?;
-            }
-
-            AppDataBuilder::_build(builder, in_memory).await
-        }
     }
 }

@@ -240,57 +240,13 @@ impl TangleTunesClient {
 
 #[cfg(test)]
 mod test {
-    use ethers::abi::Address;
-    use futures::stream::FuturesUnordered;
-
-    use crate::library::{
-        app::App,
-        util::{to_hex_prefix, PendingTransactionExt},
-    };
+    use crate::library::app::App;
 
     #[ignore]
     #[tokio::test]
-    async fn get_songs_test() -> eyre::Result<()> {
+    async fn get_songs() -> eyre::Result<()> {
         let app: &'static App = App::init_for_test(None, false).await?;
         dbg!(app.client.get_song_ids_from_index(0).await?);
         Ok(())
-    }
-
-    #[ignore]
-    #[tokio::test]
-    async fn send_many_transactions() -> eyre::Result<()> {
-        let app: &'static App = App::init_for_test(None, false).await?;
-
-        let results = FuturesUnordered::new();
-        for _i in 0..100 {
-            results.push(
-                dbg!(
-                    app.client
-                        .edit_server_info_call("127.0.0.1:3000".to_string())
-                        .send()
-                        .await
-                )?
-                .with_client(&app.client), // .confirmations(0)
-                                           // .await,
-            );
-            // tokio::time::sleep(Duration::from_millis(1000)).await;
-        }
-
-        Ok(())
-    }
-
-    #[allow(unused)]
-    async fn send_funds_to(address: &Address, amount: u64) -> std::process::Output {
-        tokio::process::Command::new("wasp-cli")
-            .arg("chain")
-            .arg("deposit")
-            .arg(to_hex_prefix(address.as_bytes()))
-            .arg("--chain=testchain")
-            .arg("base")
-            .arg(":")
-            .arg(amount.to_string())
-            .output()
-            .await
-            .unwrap()
     }
 }

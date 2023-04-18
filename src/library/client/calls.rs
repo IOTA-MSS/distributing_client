@@ -133,33 +133,3 @@ impl TangleTunesClient {
             .set_defaults()
     }
 }
-
-#[cfg(test)]
-mod test {
-    use crate::library::{app::App, util::try_from_hex_prefix};
-
-    #[tokio::test]
-    #[ignore]
-    async fn insert_indexes() -> eyre::Result<()> {
-        let app: &'static App = App::init_for_test(None, false).await?;
-
-        dbg!(
-            app.client
-                .abi_client
-                .find_insert_indexes(
-                    vec![
-                        try_from_hex_prefix(
-                            "0x20b1967566b72692dbaa773f79c972a352068d4df19fc3eb04ab83bd2c3f716d"
-                        )?,
-                        try_from_hex_prefix(
-                            "0x752d9170532899a0b362ac3cbff4e1fb3a609851927203e64339931ed0ddfe42"
-                        )?,
-                    ],
-                    vec![100.into(), 100.into()]
-                )
-                .await?
-        );
-
-        Ok(())
-    }
-}
