@@ -1,3 +1,5 @@
+A distributing client for the TangleTunes p2p music streaming service.
+
 # Building
 1. Install the rust-toolchain. (rustup)
 2. Clone the repository and cd into it.
@@ -42,4 +44,4 @@ Songs can either be added manually with `songs add mp3/<SONG_ID>.mp3` or downloa
 ## Distributing
 Distribution can be started with the command `distribute`. This starts distributing all songs in the database according to the configuration in `TangleTunes.toml`.
 
-Alternatively the `--demo` flag can be enabled with values `odd`, `even` or `all`. This automatically downloads new songs on the platform, depending on whether they are even or odd. If `all` is enabled then all songs are downloaded. A maximum price can be set with `max_price` in the `TangleTunes.toml` file, this price is per chunk.
+Alternatively the `--demo` flag can be enabled with values `odd`, `even` or `all`. This automatically downloads new songs on the platform, depending on whether they are even or odd. If `all` is enabled then all songs are downloaded. A maximum price can be set with `max_price` in the `TangleTunes.toml` file; the price is in IOTA/chunk.
