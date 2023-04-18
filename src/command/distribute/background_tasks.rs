@@ -1,9 +1,11 @@
 use crate::{
+    arguments::Demo,
     command,
     library::{app::App, util::SongId},
 };
 use chrono::{DateTime, Utc};
 use ethers::types::U256;
+use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
 use std::{
     cmp::Reverse, collections::BinaryHeap, convert::Infallible, sync::Mutex, time::Duration,
 };
@@ -29,9 +31,9 @@ pub fn exit_listener() -> eyre::Result<oneshot::Receiver<()>> {
 
 /// Automatically downloads new songs from the smart-contract, and watches for new songs added
 /// to the database.
-pub async fn auto_distribute(app: &'static App, auto_download: bool) -> Infallible {
+pub async fn auto_distribute(app: &'static App, demo: Option<Demo>) -> Infallible {
     println!("Auto-distributor spawned!");
-    println!("Automatically downloading new songs: {auto_download}");
+    println!("Automatically downloading new songs: {demo:?}");
 
     // Create the interval
     let mut interval =
@@ -56,30 +58,39 @@ pub async fn auto_distribute(app: &'static App, auto_download: bool) -> Infallib
         let last_distribution = Utc::now() - chrono::Duration::milliseconds(10);
         interval.tick().await;
 
-        if auto_download {
-            if let Err(e) = download_a_new_song(app, &mut queue).await {
-                println!("Couldn't download new songs: {e}");
+        if let Some(demo) = demo {
+            if let Err(e) = download_a_new_song(app, &mut queue, demo).await {
+                eprintln!("Couldn't download new songs: {e:#}");
             }
         }
 
-        if let Err(e) = distribute_added_songs(app, &last_distribution).await {
-            println!("Couldn't distribute new songs: {e}");
+        if let Err(e) = distribute_added_songs(app, &last_distribution, demo).await {
+            eprintln!("Couldn't distribute new songs: {e:#}");
         }
     }
 }
 
 /// Downloads a new song newly published on the smart-contract
-async fn download_a_new_song(app: &'static App, queue: &mut NewSongQueue) -> eyre::Result<()> {
+async fn download_a_new_song(
+    app: &'static App,
+    queue: &mut NewSongQueue,
+    demo: Demo,
+) -> eyre::Result<()> {
     loop {
-        // update the queue with new songs
+        // Update the queue with new songs
         for (index, id) in command::song_index::update(app).await? {
             queue.push(index, id);
         }
 
         // Take the front element from the queue
-        let Some((_index, id)) = queue.now() else {
+        let Some((index, id)) = queue.now() else {
             return Ok(())
         };
+
+        // Check the demo-mode whether to download the song
+        if !demo.to_download(*index) {
+            return Ok(());
+        }
 
         // If the song is already downloaded, find the next one
         if app.database.get_chunks(id, 0, 1).await.is_ok() {
@@ -89,6 +100,7 @@ async fn download_a_new_song(app: &'static App, queue: &mut NewSongQueue) -> eyr
 
         // Finally download the song to the database
         let id = id.to_string();
+        app.client.reset_nonce(app).await?;
         return match command::songs::download(app, id.clone(), None, U256::MAX).await {
             Ok(()) => {
                 // If it was okay we can remove it from the queue
@@ -106,12 +118,22 @@ async fn download_a_new_song(app: &'static App, queue: &mut NewSongQueue) -> eyr
 }
 
 /// Distributes any songs added from a certain time.
-async fn distribute_added_songs(app: &'static App, from: &DateTime<Utc>) -> eyre::Result<()> {
+async fn distribute_added_songs(
+    app: &'static App,
+    from: &DateTime<Utc>,
+    demo: Option<Demo>,
+) -> eyre::Result<()> {
+    let fee = if demo.is_some() {
+        Uniform::new(200, 500).sample(&mut thread_rng()).into()
+    } else {
+        app.fee
+    };
+
     for song_id in app.database.get_new_songs(from).await? {
         println!("Registering for song {song_id}...");
         if let Ok(pending_tx) = app
             .client
-            .distribute_call(vec![(song_id, app.fee)])
+            .distribute_call(vec![(song_id, fee)])
             .await?
             .send()
             .await

@@ -96,9 +96,7 @@ async fn run_command(app: &'static App, command: Command) -> eyre::Result<()> {
             AccountCommand::Delete => command::account::delete(app).await,
             AccountCommand::View => command::account::view(app).await,
         },
-        Command::Distribute { auto_download } => {
-            command::distribute::distribute(app, auto_download).await
-        }
+        Command::Distribute { demo } => command::distribute::distribute(app, demo).await,
         Command::SongIndex(command) => match command {
             SongIndexCommand::Update => {
                 command::song_index::update(app).await?;

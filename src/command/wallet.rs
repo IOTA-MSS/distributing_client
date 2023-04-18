@@ -88,7 +88,7 @@ pub(crate) async fn request_funds(app: &App) -> eyre::Result<()> {
     if response.status().is_success() {
         println!("100 MIOTA requested!");
     } else {
-        println!("Request failed: {:#?}", response);
+        bail!("Request failed: {:#?}", response);
     }
 
     Ok(())

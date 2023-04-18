@@ -6,6 +6,7 @@ pub const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
+    app::App,
     crypto::Wallet,
     util::{TTCallExt, TransactionReceiptExt},
 };
@@ -137,7 +138,7 @@ impl TangleTunesClient {
             .await?)
     }
 
-    pub async fn get_nonce(&self) -> eyre::Result<U256> {
+    pub async fn get_local_nonce(&self) -> eyre::Result<U256> {
         Ok(self.abi_client.client_ref().initialize_nonce(None).await?)
     }
 
@@ -225,6 +226,14 @@ impl TangleTunesClient {
             .await?
             .status_is_ok(&format!("Could not deregister song with ids {songs:?}"))?;
 
+        Ok(())
+    }
+
+    pub(crate) async fn reset_nonce(&self, app: &App) -> eyre::Result<()> {
+        self.edit_server_info_call(app.server_address.to_string())
+            .set_defaults()
+            .send()
+            .await?;
         Ok(())
     }
 }

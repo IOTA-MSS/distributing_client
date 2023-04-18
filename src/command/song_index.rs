@@ -67,7 +67,7 @@ pub async fn download(
     for (index, id) in indexes {
         println!("\nDownloading song {index}: {id}:");
         if let Err(e) = command::songs::download(app, id.to_string(), None, U256::MAX).await {
-            println!("Could not download song: {e}")
+            eprintln!("Could not download song: {e:#}")
         }
     }
 

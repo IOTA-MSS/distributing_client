@@ -343,7 +343,7 @@ mod test {
         let unvalidated_song_id = SongId::try_from_hex(test::UNVALIDATED_SONG_HEX_ID).unwrap();
         let db = Database::initialize_in_memory().await?;
 
-        assert!(db.remove_song(&unvalidated_song_id).await?);
+        assert!(!db.remove_song(&unvalidated_song_id).await?);
 
         let song_data = std::fs::read(
             "mp3/0x0800000722040506080000072204050608000007220405060800000722040506.mp3",

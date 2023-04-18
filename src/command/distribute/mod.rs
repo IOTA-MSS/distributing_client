@@ -1,4 +1,5 @@
 use crate::{
+    arguments::Demo,
     command::distribute::{
         background_tasks::{auto_distribute, exit_listener},
         distribution::{distribute_songs_in_database, undistribute_songs_in_database},
@@ -29,7 +30,7 @@ const DISTR_SIZE: usize = 5;
 /// The amount of attempts at distribution of songs
 const DISTR_ATTEMPTS: usize = 1;
 
-pub async fn distribute(app: &'static App, auto_download: bool) -> eyre::Result<()> {
+pub async fn distribute(app: &'static App, demo: Option<Demo>) -> eyre::Result<()> {
     let mut exit_listener = exit_listener()?;
 
     // Bind on the port
@@ -58,7 +59,7 @@ pub async fn distribute(app: &'static App, auto_download: bool) -> eyre::Result<
     }
 
     // Spawn our automatic distributor
-    let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, auto_download));
+    let mut auto_distributor = tokio::task::spawn(self::auto_distribute(app, demo));
 
     let result = tokio::select! {
         // The ctrl-c exit-handler
@@ -104,7 +105,7 @@ pub async fn accept_tcp_connections(
         tokio::task::spawn(async move {
             match handle_new_connection(&mut stream, addr, app).await {
                 Ok(()) => (),
-                Err(e) => println!("Handler {addr} exited with error {e}."),
+                Err(e) => eprintln!("Handler {addr} exited with error {e:#}."),
             }
         });
     }

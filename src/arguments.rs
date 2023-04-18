@@ -1,3 +1,5 @@
+use clap::ValueEnum;
+use num_integer::Integer;
 use serde::{Deserialize, Serialize};
 
 #[derive(clap::Parser, Debug, Clone, Serialize, Deserialize)]
@@ -41,9 +43,29 @@ pub enum Command {
     /// Start distributing.
     Distribute {
         /// Automatically download and distribute songs from other distributors
-        #[arg(long)]
-        auto_download: bool,
+        #[arg(long, value_enum)]
+        demo: Option<Demo>,
     },
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize, Deserialize)]
+pub enum Demo {
+    /// Distribute all songs
+    All,
+    /// Download even songs
+    Even,
+    // Download odd songs
+    Odd,
+}
+
+impl Demo {
+    pub fn to_download(self, index: usize) -> bool {
+        match self {
+            Demo::All => true,
+            Demo::Even => index.is_even(),
+            Demo::Odd => index.is_odd(),
+        }
+    }
 }
 
 #[derive(clap::Subcommand, Debug, Clone, Serialize, Deserialize)]

@@ -72,7 +72,7 @@ impl TangleTunesClient {
         let mut fees = Vec::with_capacity(songs.len());
         for (song_id, fee) in songs {
             song_ids.push(song_id.into());
-            fees.push(fee);
+            fees.push(fee * U256::from(WEI_PER_IOTA));
         }
 
         let indexes = join(
@@ -136,7 +136,7 @@ impl TangleTunesClient {
 
 #[cfg(test)]
 mod test {
-    use crate::library::app::App;
+    use crate::library::{app::App, util::try_from_hex_prefix};
 
     #[tokio::test]
     #[ignore]
@@ -147,32 +147,15 @@ mod test {
             app.client
                 .abi_client
                 .find_insert_indexes(
-                    // vec![
-                    //     try_from_hex_prefix(
-                    //         "0x20b1967566b72692dbaa773f79c972a352068d4df19fc3eb04ab83bd2c3f716d"
-                    //     )?,
-                    //     try_from_hex_prefix(
-                    //         "0x752d9170532899a0b362ac3cbff4e1fb3a609851927203e64339931ed0ddfe42"
-                    //     )?,
-                    // ],
                     vec![
-                        // [
-                        //     17, 255, 179, 19, 156, 194, 138, 112, 187, 107, 15, 62, 122, 72, 72,
-                        //     107, 196, 110, 75, 154, 71, 219, 38, 57, 59, 167, 24, 193, 5, 225, 2,
-                        //     245
-                        // ],
-                        // [
-                        //     32, 177, 150, 117, 102, 183, 38, 146, 219, 170, 119, 63, 121, 201, 114,
-                        //     163, 82, 6, 141, 77, 241, 159, 195, 235, 4, 171, 131, 189, 44, 63, 113,
-                        //     109
-                        // ],
-                        [
-                            242, 234, 246, 172, 117, 64, 119, 190, 150, 152, 233, 163, 169, 237,
-                            143, 93, 182, 192, 51, 5, 239, 2, 206, 50, 85, 58, 25, 211, 239, 67,
-                            59, 71
-                        ]
+                        try_from_hex_prefix(
+                            "0x20b1967566b72692dbaa773f79c972a352068d4df19fc3eb04ab83bd2c3f716d"
+                        )?,
+                        try_from_hex_prefix(
+                            "0x752d9170532899a0b362ac3cbff4e1fb3a609851927203e64339931ed0ddfe42"
+                        )?,
                     ],
-                    vec![100.into()]
+                    vec![100.into(), 100.into()]
                 )
                 .await?
         );
