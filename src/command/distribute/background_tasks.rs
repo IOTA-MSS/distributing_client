@@ -87,13 +87,8 @@ async fn download_a_new_song(
             return Ok(())
         };
 
-        // Check the demo-mode whether to download the song
-        if !demo.to_download(*index) {
-            return Ok(());
-        }
-
-        // If the song is already downloaded, find the next one
-        if app.database.get_chunks(id, 0, 1).await.is_ok() {
+        // Check the demo-mode or if the song is already downloaded, and find the next one
+        if !demo.to_download(*index) || app.database.get_chunks(id, 0, 1).await.is_ok() {
             queue.update(true);
             continue;
         };
