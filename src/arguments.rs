@@ -60,13 +60,11 @@ pub enum Demo {
 
 impl Demo {
     pub fn to_download(self, index: usize) -> bool {
-        dbg!(index);
-
-        dbg!(match self {
+        match self {
             Demo::All => true,
             Demo::Even => index.is_even(),
             Demo::Odd => index.is_odd(),
-        })
+        }
     }
 }
 
