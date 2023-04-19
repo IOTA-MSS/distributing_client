@@ -6,7 +6,6 @@ pub const WEI_PER_IOTA: u128 = 1_000_000_000_000;
 
 use super::{
     abi::{GetChunksCall, TangleTunesAbi},
-    app::App,
     crypto::Wallet,
     util::{TTCallExt, TransactionReceiptExt},
 };
@@ -229,12 +228,18 @@ impl TangleTunesClient {
         Ok(())
     }
 
-    pub(crate) async fn reset_nonce(&self, app: &App) -> eyre::Result<()> {
-        self.edit_server_info_call(app.server_address.to_string())
-            .set_defaults()
-            .send()
-            .await?
-            .await?;
+    pub async fn get_nonce_from_chain(&self) -> eyre::Result<U256> {
+        Ok(self
+            .abi_client
+            .client_ref()
+            .get_transaction_count(self.wallet_address(), None)
+            .await?)
+    }
+
+    pub(crate) async fn reset_nonce(&self) -> eyre::Result<()> {
+        // A hack to reset the nonce, since whenever a transaction fails it will be retried by
+        // the NonceManager to the tx-count of the chain.
+        assert!(self.abi_client.delete_song([0; 32]).send().await.is_err());
         Ok(())
     }
 }

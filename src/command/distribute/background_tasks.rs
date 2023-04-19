@@ -95,7 +95,8 @@ async fn download_a_new_song(
 
         // Finally download the song to the database
         let id = id.to_string();
-        app.client.reset_nonce(app).await?;
+        app.client.reset_nonce().await?;
+
         return match command::songs::download(app, id.clone(), None, U256::MAX).await {
             Ok(()) => {
                 // If it was okay we can remove it from the queue
