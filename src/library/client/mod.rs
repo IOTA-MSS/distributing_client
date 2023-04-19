@@ -233,6 +233,7 @@ impl TangleTunesClient {
         self.edit_server_info_call(app.server_address.to_string())
             .set_defaults()
             .send()
+            .await?
             .await?;
         Ok(())
     }
